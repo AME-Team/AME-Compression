@@ -14,6 +14,8 @@ export interface IElectronAPI {
   sendNotification: (title: string, body: string) => Promise<void>
   setThemeColor: (mode: string) => Promise<void>
   getPathForFile?: (file: File) => string | undefined
+  onBackendCrashed: (callback: () => void) => () => void
+  respondBackendCrash: (action: string) => void
 }
 
 declare global {

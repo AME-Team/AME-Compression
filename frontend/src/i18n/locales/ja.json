@@ -193,7 +193,10 @@
     "media_files": "メディアファイル",
     "mono": "モノラル",
     "stereo": "ステレオ",
-    "channels": "{{count}}ch"
+    "channels": "{{count}}ch",
+    "overwrite": "上書き",
+    "restart": "再起動",
+    "exit": "終了"
   },
   "errors": {
     "ffmpeg_not_found": "FFmpegが見つかりません。FFmpegをインストールするか、設定でパスを指定してください。",
@@ -206,7 +209,9 @@
     "ffmpeg_exit": "FFmpegがコード {{code}} で終了しました",
     "custom_resolution_required": "カスタム解像度を入力してください（例: 1920x1080）",
     "invalid_resolution_format": "無効な解像度形式です。WxHの形式で入力してください（例: 1920x1080）",
-    "analysis_failed": "解析に失敗しました"
+    "analysis_failed": "解析に失敗しました",
+    "backend_crash_title": "バックエンドプロセスエラー",
+    "backend_crash_message": "バックエンドプロセスが予期せず終了しました。再起動しますか？"
   },
   "batch": {
     "processing_file": "処理中 {{current}}/{{total}}: {{filename}}",
@@ -237,6 +242,8 @@
     "name_required": "プロファイル名を入力してください。",
     "overwrite_confirm": "プロファイル「{{name}}」は既に存在します。上書きしますか？",
     "load_confirm": "プロファイル「{{name}}」を読み込みますか？現在の設定は上書きされます。",
-    "select_profile": "プロファイルを選択"
+    "select_profile": "プロファイルを選択",
+    "overwrite_title": "プロファイルの上書き",
+    "load_title": "プロファイルの読込"
   }
 }

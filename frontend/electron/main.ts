@@ -102,30 +102,17 @@ function startFlask(): void {
     flaskProcess = null
 
     if (!isQuitting && !isRestarting) {
-      void dialog
-        .showMessageBox({
-          type: 'error',
-          title: 'Backend Process Error',
-          message: 'The Flask backend process has exited unexpectedly.',
-          buttons: ['Restart', 'Exit'],
-        })
-        .then((result) => {
-          if (result.response === 0) {
-            startFlask()
-          } else {
-            app.quit()
-          }
-        })
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('backend-crashed')
+      } else {
+        app.quit()
+      }
     }
   })
 
   flaskProcess.on('error', (err) => {
     console.error('Failed to start Flask process:', err)
-    void dialog.showMessageBox({
-      type: 'error',
-      title: 'Startup Error',
-      message: `Failed to start the backend process: ${err.message}`,
-    })
+    dialog.showErrorBox('Startup Error', `Failed to start the backend process: ${err.message}`)
   })
 }
 
@@ -296,6 +283,14 @@ ipcMain.handle('select-files', async () => {
   })
   if (result.canceled) return null
   return result.filePaths
+})
+
+ipcMain.on('backend-crash-response', (_event, action: string) => {
+  if (action === 'restart') {
+    startFlask()
+  } else {
+    app.quit()
+  }
 })
 
 app.on('ready', () => {

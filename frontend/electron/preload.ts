@@ -14,4 +14,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const utils = webUtils as { getPathForFile?: (f: File) => string }
     return utils.getPathForFile?.(file)
   },
+  onBackendCrashed: (callback: () => void) => {
+    const handler = (): void => {
+      callback()
+    }
+    ipcRenderer.on('backend-crashed', handler)
+    return () => ipcRenderer.removeListener('backend-crashed', handler)
+  },
+  respondBackendCrash: (action: string) => {
+    ipcRenderer.send('backend-crash-response', action)
+  },
 })
