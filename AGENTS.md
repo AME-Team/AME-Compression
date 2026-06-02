@@ -93,6 +93,9 @@ AmeCompression/
 - **AAC** for video audio tracks, **libmp3lame** for audio-only files.
 - **Volume normalization.** Auto-gain analysis via FFmpeg `volumedetect`. Target: -16 dB for speech/dialogue, with clipping prevention.
 - **Denoising.** `afftdn` filter with configurable level (0.0–1.0).
+  The UI value (0.0–1.0) is mapped to the FFmpeg `nr` parameter (0–97 dB) via
+  `nr = int(denoise_level * 97)` (see `backend/volume.py:build_audio_filter()`).
+  **Never** pass the raw UI value directly as `nr` — always apply this conversion.
 - **Resolution scaling.** Maintains aspect ratio, enforces even dimensions for encoding quality. Max: 4K (3840×2160).
 
 ---
