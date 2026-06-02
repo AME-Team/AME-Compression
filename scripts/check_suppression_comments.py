@@ -23,6 +23,7 @@ IGNORE_PATHS = {
     "uv.lock",
     "package-lock.json",
     "CONTRIBUTING.md",
+    "AGENTS.md",
     "scripts/check_suppression_comments.py",
 }
 
