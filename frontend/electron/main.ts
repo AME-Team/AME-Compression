@@ -27,6 +27,13 @@ let mainWindow: BrowserWindow | null = null
 let flaskProcess: ChildProcess | null = null
 let isQuitting = false
 let isRestarting = false
+let currentThemeMode = 'system'
+
+nativeTheme.on('updated', () => {
+  if (currentThemeMode === 'system' && mainWindow) {
+    mainWindow.setBackgroundColor(getThemeBackgroundColor('system'))
+  }
+})
 
 // Remove application menu for all platforms
 Menu.setApplicationMenu(null)
@@ -142,7 +149,7 @@ function createWindow(): void {
     width: 1100,
     height: 800,
     icon: iconImage,
-    backgroundColor: '#f9fafb',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#111827' : '#f9fafb',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -242,6 +249,7 @@ ipcMain.handle('restart-backend', async () => {
 })
 
 ipcMain.handle('set-theme-color', (_event, mode: string) => {
+  currentThemeMode = mode
   if (mainWindow) {
     mainWindow.setBackgroundColor(getThemeBackgroundColor(mode))
   }
