@@ -193,7 +193,10 @@
     "media_files": "Media files",
     "mono": "Mono",
     "stereo": "Stereo",
-    "channels": "{{count}}ch"
+    "channels": "{{count}}ch",
+    "overwrite": "Overwrite",
+    "restart": "Restart",
+    "exit": "Exit"
   },
   "errors": {
     "ffmpeg_not_found": "FFmpeg not found. Please install FFmpeg or set the path in Settings.",
@@ -206,7 +209,11 @@
     "ffmpeg_exit": "FFmpeg exited with code {{code}}",
     "custom_resolution_required": "Custom resolution is required (e.g. 1920x1080)",
     "invalid_resolution_format": "Invalid resolution format. Use WxH (e.g. 1920x1080)",
-    "analysis_failed": "Analysis failed"
+    "analysis_failed": "Analysis failed",
+    "backend_crash_title": "Backend Process Error",
+    "backend_crash_message": "The backend process has exited unexpectedly. Would you like to restart it?",
+    "backend_start_error": "Startup Error",
+    "backend_start_message": "Failed to start the backend process: {{error}}"
   },
   "batch": {
     "processing_file": "Processing {{current}}/{{total}}: {{filename}}",
@@ -237,6 +244,8 @@
     "name_required": "Please enter a profile name.",
     "overwrite_confirm": "Profile \"{{name}}\" already exists. Overwrite?",
     "load_confirm": "Load profile \"{{name}}\"? Current settings will be replaced.",
-    "select_profile": "Select profile"
+    "select_profile": "Select profile",
+    "overwrite_title": "Overwrite Profile",
+    "load_title": "Load Profile"
   }
 }

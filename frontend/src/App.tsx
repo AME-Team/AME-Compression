@@ -6,17 +6,41 @@ import type { MediaViewHandle } from './views/MediaView'
 import type { MediaProfile } from './profiles'
 import SettingsView from './views/SettingsView'
 import FloatingBar from './components/FloatingBar'
+import ConfirmModal from './components/ConfirmModal'
 import { useJobs } from './hooks/useJobs'
 import { api, initializeApi } from './services/api'
 import './App.css'
 
+interface BackendErrorState {
+  open: boolean
+  title: string
+  message: string
+  variant: 'warning' | 'danger' | 'info'
+  confirmLabel: string
+  cancelLabel: string
+  showCancel: boolean
+  onConfirm: (() => void) | null
+}
+
+const INITIAL_BACKEND_ERROR: BackendErrorState = {
+  open: false,
+  title: '',
+  message: '',
+  variant: 'danger',
+  confirmLabel: '',
+  cancelLabel: '',
+  showCancel: false,
+  onConfirm: null,
+}
+
 function App(): React.JSX.Element {
-  const { i18n } = useTranslation()
+  const { i18n, t } = useTranslation()
   const [activeView, setActiveView] = useState('media')
   const [isReady, setIsReady] = useState(false)
   const { jobs, cancelJob } = useJobs()
   const [dismissedJobIds, setDismissedJobIds] = useState<Set<string>>(new Set())
   const mediaViewRef = useRef<MediaViewHandle>(null)
+  const [backendError, setBackendError] = useState<BackendErrorState>(INITIAL_BACKEND_ERROR)
 
   const [compressionDisabled, setCompressionDisabled] = useState(true)
   const [compressionLoading, setCompressionLoading] = useState(false)
@@ -86,6 +110,44 @@ function App(): React.JSX.Element {
     void initApp()
   }, [i18n])
 
+  useEffect(() => {
+    const cleanup1 = window.electronAPI?.onBackendCrashed(() => {
+      setBackendError({
+        open: true,
+        title: t('errors.backend_crash_title'),
+        message: t('errors.backend_crash_message'),
+        variant: 'danger',
+        confirmLabel: t('common.restart'),
+        cancelLabel: t('common.exit'),
+        showCancel: true,
+        onConfirm: () => {
+          setBackendError(INITIAL_BACKEND_ERROR)
+          void window.electronAPI?.restartBackend()
+        },
+      })
+    })
+
+    const cleanup2 = window.electronAPI?.onBackendStartupError((message) => {
+      setBackendError({
+        open: true,
+        title: t('errors.backend_start_error'),
+        message: t('errors.backend_start_message', { error: message }),
+        variant: 'danger',
+        confirmLabel: t('common.ok'),
+        cancelLabel: '',
+        showCancel: false,
+        onConfirm: () => {
+          setBackendError(INITIAL_BACKEND_ERROR)
+        },
+      })
+    })
+
+    return () => {
+      cleanup1?.()
+      cleanup2?.()
+    }
+  }, [t])
+
   if (!isReady) {
     return <div className="loading-screen">Loading...</div>
   }
@@ -148,6 +210,22 @@ function App(): React.JSX.Element {
           }}
         />
       )}
+      <ConfirmModal
+        open={backendError.open}
+        title={backendError.title}
+        message={backendError.message}
+        confirmLabel={backendError.confirmLabel}
+        cancelLabel={backendError.cancelLabel}
+        variant={backendError.variant}
+        showCancel={backendError.showCancel}
+        onConfirm={backendError.onConfirm ?? (() => undefined)}
+        onCancel={() => {
+          if (backendError.showCancel) {
+            window.electronAPI?.respondBackendCrash('exit')
+          }
+          setBackendError(INITIAL_BACKEND_ERROR)
+        }}
+      />
     </>
   )
 }

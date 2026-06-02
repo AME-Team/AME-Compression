@@ -6,6 +6,7 @@ import type { Job } from '../types'
 import type { MediaProfile } from '../profiles'
 import { loadProfiles, saveProfiles } from '../profiles'
 import { ProgressPanel } from './ProgressPanel'
+import ConfirmModal from './ConfirmModal'
 
 function useClickOutside(
   ref: React.RefObject<HTMLDivElement | null>,
@@ -44,6 +45,24 @@ interface FloatingBarProps {
   onApplyDefaults: () => void
 }
 
+interface ConfirmState {
+  open: boolean
+  title: string
+  message: string
+  variant: 'warning' | 'danger' | 'info'
+  confirmLabel: string
+  onConfirm: (() => void) | null
+}
+
+const INITIAL_CONFIRM_STATE: ConfirmState = {
+  open: false,
+  title: '',
+  message: '',
+  variant: 'info',
+  confirmLabel: '',
+  onConfirm: null,
+}
+
 interface ProfileModalContentProps {
   t: TFunction
   currentSettings: Omit<MediaProfile, 'name'>
@@ -64,6 +83,7 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
   const [profiles, setProfiles] = useState<MediaProfile[]>(loadProfiles)
   const [profileName, setProfileName] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [confirmState, setConfirmState] = useState<ConfirmState>(INITIAL_CONFIRM_STATE)
 
   const showMessage = useCallback((msg: string): void => {
     setStatusMessage(msg)
@@ -79,14 +99,26 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
       return
     }
     const existingIndex = profiles.findIndex((p) => p.name === name)
-    let updated: MediaProfile[]
     if (existingIndex >= 0) {
-      if (!window.confirm(t('profile.overwrite_confirm', { name }))) return
-      updated = [...profiles]
-      updated[existingIndex] = { ...currentSettings, name }
-    } else {
-      updated = [...profiles, { ...currentSettings, name }]
+      setConfirmState({
+        open: true,
+        title: t('profile.overwrite_title'),
+        message: t('profile.overwrite_confirm', { name }),
+        variant: 'warning',
+        confirmLabel: t('common.overwrite'),
+        onConfirm: () => {
+          setConfirmState(INITIAL_CONFIRM_STATE)
+          const updated = [...profiles]
+          updated[existingIndex] = { ...currentSettings, name }
+          setProfiles(updated)
+          saveProfiles(updated)
+          showMessage(t('profile.saved', { name }))
+          setProfileName('')
+        },
+      })
+      return
     }
+    const updated = [...profiles, { ...currentSettings, name }]
     setProfiles(updated)
     saveProfiles(updated)
     showMessage(t('profile.saved', { name }))
@@ -94,11 +126,20 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
   }
 
   const handleLoad = (profile: MediaProfile): void => {
-    if (!window.confirm(t('profile.load_confirm', { name: profile.name }))) return
-    const { name: _name, ...settings } = profile
-    onApplyProfile(settings)
-    onNotify(t('profile.loaded', { name: _name }))
-    onClose()
+    setConfirmState({
+      open: true,
+      title: t('profile.load_title'),
+      message: t('profile.load_confirm', { name: profile.name }),
+      variant: 'info',
+      confirmLabel: t('profile.load'),
+      onConfirm: () => {
+        setConfirmState(INITIAL_CONFIRM_STATE)
+        const { name: _name, ...settings } = profile
+        onApplyProfile(settings)
+        onNotify(t('profile.loaded', { name: _name }))
+        onClose()
+      },
+    })
   }
 
   const handleDelete = (name: string): void => {
@@ -191,6 +232,18 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
           {statusMessage}
         </div>
       )}
+      <ConfirmModal
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={t('common.cancel')}
+        variant={confirmState.variant}
+        onConfirm={confirmState.onConfirm ?? (() => undefined)}
+        onCancel={() => {
+          setConfirmState(INITIAL_CONFIRM_STATE)
+        }}
+      />
     </div>
   )
 }

@@ -102,30 +102,28 @@ function startFlask(): void {
     flaskProcess = null
 
     if (!isQuitting && !isRestarting) {
-      void dialog
-        .showMessageBox({
-          type: 'error',
-          title: 'Backend Process Error',
-          message: 'The Flask backend process has exited unexpectedly.',
-          buttons: ['Restart', 'Exit'],
-        })
-        .then((result) => {
-          if (result.response === 0) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('backend-crashed')
+        const handleCrashResponse = (_event: Electron.IpcMainEvent, action: string): void => {
+          ipcMain.removeListener('backend-crash-response', handleCrashResponse)
+          if (action === 'restart') {
             startFlask()
           } else {
             app.quit()
           }
-        })
+        }
+        ipcMain.once('backend-crash-response', handleCrashResponse)
+      } else {
+        app.quit()
+      }
     }
   })
 
   flaskProcess.on('error', (err) => {
     console.error('Failed to start Flask process:', err)
-    void dialog.showMessageBox({
-      type: 'error',
-      title: 'Startup Error',
-      message: `Failed to start the backend process: ${err.message}`,
-    })
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('backend-startup-error', err.message)
+    }
   })
 }
 
