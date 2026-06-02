@@ -44,9 +44,17 @@ interface ComboBoxProps {
   options: { value: string; label: string }[]
   placeholder?: string
   disabled?: boolean
+  sanitize?: (val: string) => string
 }
 
-const ComboBox: React.FC<ComboBoxProps> = ({ value, onChange, options, placeholder, disabled }) => {
+const ComboBox: React.FC<ComboBoxProps> = ({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled,
+  sanitize,
+}) => {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
@@ -75,7 +83,13 @@ const ComboBox: React.FC<ComboBoxProps> = ({ value, onChange, options, placehold
           placeholder={placeholder}
           disabled={disabled}
           onChange={(e) => {
-            onChange(e.target.value)
+            const sanitized = sanitize ? sanitize(e.target.value) : e.target.value
+            onChange(sanitized)
+          }}
+          onBlur={() => {
+            if (sanitize && value !== '' && !/^\d+$/.test(value)) {
+              onChange('')
+            }
           }}
           style={{ flex: 1, borderRadius: 'var(--border-radius, 0)' }}
           role="combobox"
@@ -482,7 +496,12 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               audio_bitrate: resolvedVideoAudioBitrate,
               audio_enabled: audioEnabled,
               resolution: resolution === 'original' ? null : resolution,
-              max_fps: maxFps === 'unlimited' ? null : parseInt(maxFps),
+              max_fps:
+                maxFps === 'unlimited'
+                  ? null
+                  : Number.isFinite(parseInt(maxFps, 10))
+                    ? parseInt(maxFps, 10)
+                    : null,
               volume_gain_db: volumeGain,
               denoise_level: denoiseEnabled ? denoiseLevel : null,
             })
@@ -725,6 +744,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   onChange={(val) => {
                     setMaxFps(val || 'unlimited')
                   }}
+                  sanitize={(val) => val.replace(/[^\d]/g, '')}
                   placeholder={t('video_settings.fps_options.unlimited')}
                   options={FPS_OPTIONS.map((fps) => ({
                     value: fps,
