@@ -74,6 +74,7 @@ function App(): React.JSX.Element {
 
         if (appearance_mode) {
           document.documentElement.setAttribute('data-theme', appearance_mode)
+          void window.electronAPI?.setThemeColor(appearance_mode)
         }
       } catch (error) {
         console.error('Failed to initialize app settings', error)

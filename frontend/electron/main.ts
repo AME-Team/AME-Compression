@@ -6,6 +6,7 @@ import {
   Menu,
   nativeImage,
   Notification,
+  nativeTheme,
   session,
 } from 'electron'
 import * as path from 'path'
@@ -127,12 +128,21 @@ function getIconPath(): string {
     : path.join(process.resourcesPath, 'app', 'frontend', 'public', 'icon.png')
 }
 
+function getThemeBackgroundColor(mode: string): string {
+  if (mode === 'dark') return '#111827'
+  if (mode === 'system') {
+    return nativeTheme.shouldUseDarkColors ? '#111827' : '#f9fafb'
+  }
+  return '#f9fafb'
+}
+
 function createWindow(): void {
   const iconImage = nativeImage.createFromPath(getIconPath())
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 800,
     icon: iconImage,
+    backgroundColor: '#f9fafb',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -229,6 +239,12 @@ ipcMain.handle('restart-backend', async () => {
   }
   startFlask()
   return true
+})
+
+ipcMain.handle('set-theme-color', (_event, mode: string) => {
+  if (mainWindow) {
+    mainWindow.setBackgroundColor(getThemeBackgroundColor(mode))
+  }
 })
 
 ipcMain.handle('send-notification', (_event, title: string, body: string) => {
