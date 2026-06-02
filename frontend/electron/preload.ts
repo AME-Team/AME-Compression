@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectFiles: () => ipcRenderer.invoke('select-files'),
   sendNotification: (title: string, body: string) =>
     ipcRenderer.invoke('send-notification', title, body),
+  setThemeColor: (mode: string) => ipcRenderer.invoke('set-theme-color', mode),
   getPathForFile: (file: File) => {
     const utils = webUtils as { getPathForFile?: (f: File) => string }
     return utils.getPathForFile?.(file)

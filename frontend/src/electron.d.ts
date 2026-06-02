@@ -12,6 +12,7 @@ export interface IElectronAPI {
   selectFile: () => Promise<string | null>
   selectFiles: () => Promise<string[] | null>
   sendNotification: (title: string, body: string) => Promise<void>
+  setThemeColor: (mode: string) => Promise<void>
   getPathForFile?: (file: File) => string | undefined
 }
 

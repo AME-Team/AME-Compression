@@ -39,11 +39,11 @@ const SettingsView: React.FC = () => {
       await api.post<unknown>('/settings', settings)
       setMessage(t('settings.saved'))
 
-      // Apply language change immediately
       void i18n.changeLanguage(settings.language)
 
-      // Apply theme
       document.documentElement.setAttribute('data-theme', settings.appearance_mode)
+
+      void window.electronAPI?.setThemeColor(settings.appearance_mode)
 
       setTimeout(() => {
         setMessage('')
