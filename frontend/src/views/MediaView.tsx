@@ -45,6 +45,8 @@ interface ComboBoxProps {
   placeholder?: string
   disabled?: boolean
   sanitize?: (val: string) => string
+  validate?: (val: string) => boolean
+  fallbackValue?: string
 }
 
 const ComboBox: React.FC<ComboBoxProps> = ({
@@ -54,6 +56,8 @@ const ComboBox: React.FC<ComboBoxProps> = ({
   placeholder,
   disabled,
   sanitize,
+  validate,
+  fallbackValue,
 }) => {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -86,9 +90,12 @@ const ComboBox: React.FC<ComboBoxProps> = ({
             const sanitized = sanitize ? sanitize(e.target.value) : e.target.value
             onChange(sanitized)
           }}
-          onBlur={() => {
-            if (sanitize && value !== '' && !/^\d+$/.test(value)) {
-              onChange('')
+          onBlur={(e) => {
+            const val = e.target.value
+            if (validate && !validate(val)) {
+              onChange(fallbackValue ?? '')
+            } else {
+              onChange(val)
             }
           }}
           style={{ flex: 1, borderRadius: 'var(--border-radius, 0)' }}
@@ -745,6 +752,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                     setMaxFps(val || 'unlimited')
                   }}
                   sanitize={(val) => val.replace(/[^\d]/g, '')}
+                  validate={(val) => val === '' || /^\d+$/.test(val)}
+                  fallbackValue=""
                   placeholder={t('video_settings.fps_options.unlimited')}
                   options={FPS_OPTIONS.map((fps) => ({
                     value: fps,
