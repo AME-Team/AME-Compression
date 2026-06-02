@@ -64,8 +64,18 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   useEffect(() => {
     if (!open) return
-    document.addEventListener('keydown', handleKeyDown)
+    const previousActiveElement = document.activeElement
     confirmButtonRef.current?.focus()
+    return () => {
+      if (previousActiveElement instanceof HTMLElement) {
+        previousActiveElement.focus()
+      }
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
     }

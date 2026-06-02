@@ -111,7 +111,7 @@ function App(): React.JSX.Element {
   }, [i18n])
 
   useEffect(() => {
-    const cleanup1 = window.electronAPI?.onBackendCrashed(() => {
+    const cleanup = window.electronAPI?.onBackendCrashed(() => {
       setBackendError({
         open: true,
         title: t('errors.backend_crash_title'),
@@ -122,29 +122,13 @@ function App(): React.JSX.Element {
         showCancel: true,
         onConfirm: () => {
           setBackendError(INITIAL_BACKEND_ERROR)
-          void window.electronAPI?.restartBackend()
-        },
-      })
-    })
-
-    const cleanup2 = window.electronAPI?.onBackendStartupError((message) => {
-      setBackendError({
-        open: true,
-        title: t('errors.backend_start_error'),
-        message: t('errors.backend_start_message', { error: message }),
-        variant: 'danger',
-        confirmLabel: t('common.ok'),
-        cancelLabel: '',
-        showCancel: false,
-        onConfirm: () => {
-          setBackendError(INITIAL_BACKEND_ERROR)
+          window.electronAPI?.respondBackendCrash('restart')
         },
       })
     })
 
     return () => {
-      cleanup1?.()
-      cleanup2?.()
+      cleanup?.()
     }
   }, [t])
 

@@ -211,9 +211,7 @@
     "invalid_resolution_format": "無効な解像度形式です。WxHの形式で入力してください（例: 1920x1080）",
     "analysis_failed": "解析に失敗しました",
     "backend_crash_title": "バックエンドプロセスエラー",
-    "backend_crash_message": "バックエンドプロセスが予期せず終了しました。再起動しますか？",
-    "backend_start_error": "起動エラー",
-    "backend_start_message": "バックエンドプロセスの起動に失敗しました: {{error}}"
+    "backend_crash_message": "バックエンドプロセスが予期せず終了しました。再起動しますか？"
   },
   "batch": {
     "processing_file": "処理中 {{current}}/{{total}}: {{filename}}",

@@ -104,15 +104,6 @@ function startFlask(): void {
     if (!isQuitting && !isRestarting) {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('backend-crashed')
-        const handleCrashResponse = (_event: Electron.IpcMainEvent, action: string): void => {
-          ipcMain.removeListener('backend-crash-response', handleCrashResponse)
-          if (action === 'restart') {
-            startFlask()
-          } else {
-            app.quit()
-          }
-        }
-        ipcMain.once('backend-crash-response', handleCrashResponse)
       } else {
         app.quit()
       }
@@ -121,9 +112,7 @@ function startFlask(): void {
 
   flaskProcess.on('error', (err) => {
     console.error('Failed to start Flask process:', err)
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('backend-startup-error', err.message)
-    }
+    dialog.showErrorBox('Startup Error', `Failed to start the backend process: ${err.message}`)
   })
 }
 
@@ -294,6 +283,14 @@ ipcMain.handle('select-files', async () => {
   })
   if (result.canceled) return null
   return result.filePaths
+})
+
+ipcMain.on('backend-crash-response', (_event, action: string) => {
+  if (action === 'restart') {
+    startFlask()
+  } else {
+    app.quit()
+  }
 })
 
 app.on('ready', () => {

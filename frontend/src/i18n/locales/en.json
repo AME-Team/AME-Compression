@@ -211,9 +211,7 @@
     "invalid_resolution_format": "Invalid resolution format. Use WxH (e.g. 1920x1080)",
     "analysis_failed": "Analysis failed",
     "backend_crash_title": "Backend Process Error",
-    "backend_crash_message": "The backend process has exited unexpectedly. Would you like to restart it?",
-    "backend_start_error": "Startup Error",
-    "backend_start_message": "Failed to start the backend process: {{error}}"
+    "backend_crash_message": "The backend process has exited unexpectedly. Would you like to restart it?"
   },
   "batch": {
     "processing_file": "Processing {{current}}/{{total}}: {{filename}}",
