@@ -77,8 +77,9 @@ const SettingsView: React.FC = () => {
         <div className="section-title">{t('settings.section_appearance')}</div>
         <div className="settings-grid">
           <div className="setting-item">
-            <label>{t('settings.language')}</label>
+            <label htmlFor="language-select">{t('settings.language')}</label>
             <select
+              id="language-select"
               value={settings.language}
               onChange={(e) => {
                 handleLanguageChange(e.target.value)
@@ -90,30 +91,36 @@ const SettingsView: React.FC = () => {
           </div>
           <div className="setting-item">
             <label>{t('settings.theme')}</label>
-            <div className="theme-toggle">
+            <div className="theme-toggle" role="radiogroup" aria-label={t('settings.theme')}>
               <button
                 className={`theme-button ${settings.appearance_mode === 'light' ? 'active' : ''}`}
                 onClick={() => {
                   handleThemeChange('light')
                 }}
+                role="radio"
+                aria-checked={settings.appearance_mode === 'light'}
               >
-                <Sun size={18} /> {t('settings.themes.light')}
+                <Sun size={16} /> {t('settings.themes.light')}
               </button>
               <button
                 className={`theme-button ${settings.appearance_mode === 'dark' ? 'active' : ''}`}
                 onClick={() => {
                   handleThemeChange('dark')
                 }}
+                role="radio"
+                aria-checked={settings.appearance_mode === 'dark'}
               >
-                <Moon size={18} /> {t('settings.themes.dark')}
+                <Moon size={16} /> {t('settings.themes.dark')}
               </button>
               <button
                 className={`theme-button ${settings.appearance_mode === 'system' ? 'active' : ''}`}
                 onClick={() => {
                   handleThemeChange('system')
                 }}
+                role="radio"
+                aria-checked={settings.appearance_mode === 'system'}
               >
-                <Monitor size={18} /> {t('settings.themes.system')}
+                <Monitor size={16} /> {t('settings.themes.system')}
               </button>
             </div>
           </div>
@@ -122,9 +129,10 @@ const SettingsView: React.FC = () => {
         <div className="section-title">{t('settings.section_ffmpeg')}</div>
         <div className="settings-grid">
           <div className="setting-item" style={{ gridColumn: '1 / -1' }}>
-            <label>{t('settings.ffmpeg_path')}</label>
+            <label htmlFor="ffmpeg-path">{t('settings.ffmpeg_path')}</label>
             <div className="input-with-button">
               <input
+                id="ffmpeg-path"
                 type="text"
                 value={settings.ffmpeg_path}
                 onChange={(e) => {
@@ -139,8 +147,9 @@ const SettingsView: React.FC = () => {
         <div className="section-title">{t('settings.section_output')}</div>
         <div className="settings-grid">
           <div className="setting-item" style={{ gridColumn: '1 / -1' }}>
-            <label>{t('settings.output_default')}</label>
+            <label htmlFor="output-dir">{t('settings.output_default')}</label>
             <input
+              id="output-dir"
               type="text"
               value={settings.default_output_dir}
               onChange={(e) => {
@@ -153,10 +162,14 @@ const SettingsView: React.FC = () => {
 
         <div className="settings-actions">
           <button className="primary-button" onClick={() => void saveSettings()} disabled={saving}>
-            {saving ? <RefreshCw className="spin" size={18} /> : <Save size={18} />}
+            {saving ? <RefreshCw className="spin" size={16} /> : <Save size={16} />}
             {t('settings.save')}
           </button>
-          {message && <span className="status-message">{message}</span>}
+          {message && (
+            <span className="status-message" role="status" aria-live="polite">
+              {message}
+            </span>
+          )}
         </div>
       </section>
     </div>

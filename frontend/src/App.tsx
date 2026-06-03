@@ -7,6 +7,8 @@ import type { MediaProfile } from './profiles'
 import SettingsView from './views/SettingsView'
 import FloatingBar from './components/FloatingBar'
 import ConfirmModal from './components/ConfirmModal'
+import ToastProvider from './components/ToastProvider'
+import CommandPalette from './components/CommandPalette'
 import { useJobs } from './hooks/useJobs'
 import { api, initializeApi } from './services/api'
 import './App.css'
@@ -41,6 +43,7 @@ function App(): React.JSX.Element {
   const [dismissedJobIds, setDismissedJobIds] = useState<Set<string>>(new Set())
   const mediaViewRef = useRef<MediaViewHandle>(null)
   const [backendError, setBackendError] = useState<BackendErrorState>(INITIAL_BACKEND_ERROR)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
   const [compressionDisabled, setCompressionDisabled] = useState(true)
   const [compressionLoading, setCompressionLoading] = useState(false)
@@ -132,6 +135,19 @@ function App(): React.JSX.Element {
     }
   }, [t])
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setCommandPaletteOpen((prev) => !prev)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
+
   if (!isReady) {
     return <div className="loading-screen">Loading...</div>
   }
@@ -173,7 +189,7 @@ function App(): React.JSX.Element {
   const isMediaView = activeView === 'media'
 
   return (
-    <>
+    <ToastProvider>
       <Layout activeView={activeView} onViewChange={setActiveView}>
         {renderView()}
       </Layout>
@@ -194,6 +210,14 @@ function App(): React.JSX.Element {
           }}
         />
       )}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onClose={() => {
+          setCommandPaletteOpen(false)
+        }}
+        onNavigate={setActiveView}
+        onStartCompression={handleStartCompression}
+      />
       <ConfirmModal
         open={backendError.open}
         title={backendError.title}
@@ -210,7 +234,7 @@ function App(): React.JSX.Element {
           setBackendError(INITIAL_BACKEND_ERROR)
         }}
       />
-    </>
+    </ToastProvider>
   )
 }
 

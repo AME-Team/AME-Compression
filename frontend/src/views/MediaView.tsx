@@ -47,6 +47,7 @@ interface ComboBoxProps {
   sanitize?: (val: string) => string
   validate?: (val: string) => boolean
   fallbackValue?: string
+  ariaLabel?: string
 }
 
 const ComboBox: React.FC<ComboBoxProps> = ({
@@ -58,6 +59,7 @@ const ComboBox: React.FC<ComboBoxProps> = ({
   sanitize,
   validate,
   fallbackValue,
+  ariaLabel,
 }) => {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -98,10 +100,11 @@ const ComboBox: React.FC<ComboBoxProps> = ({
               onChange(val)
             }
           }}
-          style={{ flex: 1, borderRadius: 'var(--border-radius, 0)' }}
+          style={{ flex: 1, borderRadius: '8px' }}
           role="combobox"
           aria-expanded={open}
           aria-haspopup="listbox"
+          aria-label={ariaLabel}
         />
         <button
           type="button"
@@ -111,7 +114,7 @@ const ComboBox: React.FC<ComboBoxProps> = ({
             setOpen(!open)
           }}
           style={{
-            borderRadius: 'var(--border-radius, 0)',
+            borderRadius: '0 8px 8px 0',
             padding: '0 8px',
             borderLeft: 'none',
             minWidth: '32px',
@@ -135,11 +138,14 @@ const ComboBox: React.FC<ComboBoxProps> = ({
             padding: 0,
             maxHeight: '200px',
             overflowY: 'auto',
-            background: 'var(--card-bg)',
-            border: '1px solid var(--border-color)',
-            borderRadius: 'var(--border-radius, 0)',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            borderRadius: '8px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
           }}
+          className={
+            document.documentElement.getAttribute('data-theme') === 'light'
+              ? 'theme-light-dropdown'
+              : ''
+          }
         >
           {options.map((opt) => (
             <li
@@ -152,10 +158,11 @@ const ComboBox: React.FC<ComboBoxProps> = ({
               }}
               className="combobox-option"
               style={{
-                padding: '6px 10px',
+                padding: '8px 12px',
                 cursor: 'pointer',
-                background: value === opt.value ? 'var(--primary-color)' : 'transparent',
+                background: value === opt.value ? 'var(--color-primary)' : 'transparent',
                 color: value === opt.value ? '#fff' : 'inherit',
+                fontSize: '0.85rem',
               }}
             >
               {opt.label}
@@ -194,8 +201,9 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
     <div className="sub-section-title">{t('volume.title')}</div>
     <div className="settings-grid">
       <div className="setting-item">
-        <label>{t('volume.mode')}</label>
+        <label htmlFor="volume-mode">{t('volume.mode')}</label>
         <select
+          id="volume-mode"
           value={volumeMode}
           onChange={(e) => {
             setVolumeMode(e.target.value)
@@ -209,12 +217,13 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
       </div>
       {(volumeMode === 'multiplier' || volumeMode === 'db') && (
         <div className="setting-item">
-          <label>
+          <label htmlFor="volume-slider">
             {volumeMode === 'multiplier' ? t('volume.multiplier_label') : t('volume.db_label')}:{' '}
             {volumeValue}
             {volumeMode === 'db' ? ' dB' : 'x'}
           </label>
           <input
+            id="volume-slider"
             type="range"
             min={volumeMode === 'multiplier' ? '0.1' : '-20'}
             max={volumeMode === 'multiplier' ? '5.0' : '20'}
@@ -223,6 +232,7 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
             onChange={(e) => {
               setVolumeValue(parseFloat(e.target.value))
             }}
+            aria-label={`${volumeMode === 'multiplier' ? t('volume.multiplier_label') : t('volume.db_label')}: ${volumeValue}`}
           />
         </div>
       )}
@@ -231,8 +241,9 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
     <div className="sub-section-title">{t('denoise.title')}</div>
     <div className="settings-grid">
       <div className="setting-item">
-        <label>
+        <label htmlFor="denoise-toggle">
           <input
+            id="denoise-toggle"
             type="checkbox"
             checked={denoiseEnabled}
             onChange={(e) => {
@@ -244,7 +255,7 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
       </div>
       {denoiseEnabled && (
         <div className="setting-item" style={{ gridColumn: 'span 2' }}>
-          <label>
+          <label htmlFor="denoise-slider">
             {t('denoise.level')}: {denoiseLevel}
           </label>
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -253,7 +264,8 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
               onClick={() => {
                 setDenoiseLevel(0.15)
               }}
-              style={{ flex: 1, padding: '4px' }}
+              style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
+              aria-pressed={denoiseLevel === 0.15}
             >
               {t('denoise.presets.light')}
             </button>
@@ -262,7 +274,8 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
               onClick={() => {
                 setDenoiseLevel(0.4)
               }}
-              style={{ flex: 1, padding: '4px' }}
+              style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
+              aria-pressed={denoiseLevel === 0.4}
             >
               {t('denoise.presets.medium')}
             </button>
@@ -271,12 +284,14 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
               onClick={() => {
                 setDenoiseLevel(0.7)
               }}
-              style={{ flex: 1, padding: '4px' }}
+              style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
+              aria-pressed={denoiseLevel === 0.7}
             >
               {t('denoise.presets.strong')}
             </button>
           </div>
           <input
+            id="denoise-slider"
             type="range"
             min="0"
             max="1"
@@ -285,6 +300,7 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
             onChange={(e) => {
               setDenoiseLevel(parseFloat(e.target.value))
             }}
+            aria-label={`${t('denoise.level')}: ${denoiseLevel}`}
           />
         </div>
       )}
@@ -314,7 +330,6 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [inputPaths, setInputPaths] = useState<string[]>([])
   const [manualInput, setManualInput] = useState('')
 
-  // Video settings
   const [crf, setCrf] = useState(25)
   const [preset, setPreset] = useState(6)
   const [maxResolution, setMaxResolution] = useState('original')
@@ -324,11 +339,9 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [videoAudioBitrate, setVideoAudioBitrate] = useState('192')
   const [audioEnabled, setAudioEnabled] = useState(true)
 
-  // Audio settings
   const [audioBitrate, setAudioBitrate] = useState('192')
   const [keepMetadata, setKeepMetadata] = useState(true)
 
-  // Common settings
   const [volumeMode, setVolumeMode] = useState('disabled')
   const [volumeValue, setVolumeValue] = useState(0)
   const [denoiseEnabled, setDenoiseEnabled] = useState(false)
@@ -450,6 +463,10 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         setDropSuccess(false)
       }, 600)
     }
+  }
+
+  const handleKeyboardFileSelect = (): void => {
+    void handleSelectFiles()
   }
 
   const addManualPath = (): void => {
@@ -581,6 +598,15 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        role="button"
+        tabIndex={0}
+        aria-label={t('a11y.drop_zone_label')}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            handleKeyboardFileSelect()
+          }
+        }}
       >
         <h2>
           <Upload size={18} /> {t('file.select_multiple')}
@@ -596,15 +622,24 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             onKeyDown={(e) => {
               if (e.key === 'Enter') addManualPath()
             }}
+            aria-label={t('file.browse_hint')}
           />
-          <button className="secondary-button" onClick={() => void handleSelectFiles()}>
+          <button
+            className="secondary-button"
+            onClick={() => void handleSelectFiles()}
+            aria-label={t('file.select')}
+          >
             <FileSearch size={18} />
           </button>
         </div>
         {inputPaths.length > 0 && (
-          <div className="file-list">
+          <div
+            className="file-list"
+            role="list"
+            aria-label={t('file.selected_count', { count: inputPaths.length })}
+          >
             {inputPaths.map((filePath, index) => (
-              <div key={filePath} className="file-list-item">
+              <div key={filePath} className="file-list-item" role="listitem">
                 <span className="file-list-path" title={filePath}>
                   {filePath.split(/[\\/]/).pop()}
                 </span>
@@ -613,7 +648,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   onClick={() => {
                     removeFile(index)
                   }}
-                  aria-label={t('file.remove')}
+                  aria-label={`${t('file.remove')}: ${filePath.split(/[\\/]/).pop()}`}
                 >
                   <X size={14} />
                 </button>
@@ -643,28 +678,42 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
           <div
             style={{
               marginTop: '12px',
-              padding: '8px 12px',
-              background: '#fef2f2',
-              border: '1px solid #fecaca',
-              borderRadius: '6px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              background: 'var(--color-error-bg)',
+              border: '1px solid rgba(248, 113, 113, 0.2)',
             }}
+            role="alert"
           >
             <p
-              style={{ margin: '0 0 4px', color: '#dc2626', fontWeight: 600, fontSize: '0.85rem' }}
+              style={{
+                margin: '0 0 4px',
+                color: 'var(--color-error)',
+                fontWeight: 600,
+                fontSize: '0.85rem',
+              }}
             >
               {t('file.failed_count', { count: failedFiles.length })}
             </p>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: '#991b1b', fontSize: '0.8rem' }}>
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: '20px',
+                color: 'var(--color-error)',
+                fontSize: '0.8rem',
+              }}
+            >
               {failedFiles.map((f) => (
                 <li key={f}>{f.split(/[\\/]/).pop()}</li>
               ))}
             </ul>
           </div>
         )}
-        <div style={{ marginTop: '16px' }}>
+        <div style={{ marginTop: '16px' }} role="radiogroup" aria-label={t('nav.video_audio')}>
           <label style={{ display: 'inline-block', marginRight: '16px' }}>
             <input
               type="radio"
+              name="media-type"
               checked={mediaType === 'video'}
               onChange={() => {
                 setMediaType('video')
@@ -675,6 +724,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
           <label style={{ display: 'inline-block' }}>
             <input
               type="radio"
+              name="media-type"
               checked={mediaType === 'audio'}
               onChange={() => {
                 setMediaType('audio')
@@ -696,10 +746,11 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             <div className="section-title">{t('video_settings.video_section')}</div>
             <div className="settings-grid">
               <div className="setting-item">
-                <label>
+                <label htmlFor="crf-slider">
                   {t('video_settings.crf')}: {crf}
                 </label>
                 <input
+                  id="crf-slider"
                   type="range"
                   min="0"
                   max="63"
@@ -707,14 +758,16 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   onChange={(e) => {
                     setCrf(parseInt(e.target.value))
                   }}
+                  aria-label={`${t('video_settings.crf')}: ${crf}`}
                 />
                 <small>{t('video_settings.crf_range')}</small>
               </div>
               <div className="setting-item">
-                <label>
+                <label htmlFor="preset-slider">
                   {t('video_settings.preset')}: {preset}
                 </label>
                 <input
+                  id="preset-slider"
                   type="range"
                   min="0"
                   max="13"
@@ -722,12 +775,14 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   onChange={(e) => {
                     setPreset(parseInt(e.target.value))
                   }}
+                  aria-label={`${t('video_settings.preset')}: ${preset}`}
                 />
                 <small>{t('video_settings.preset_range')}</small>
               </div>
               <div className="setting-item">
-                <label>{t('video_settings.max_resolution')}</label>
+                <label htmlFor="max-resolution">{t('video_settings.max_resolution')}</label>
                 <select
+                  id="max-resolution"
                   value={maxResolution}
                   onChange={(e) => {
                     setMaxResolution(e.target.value)
@@ -749,6 +804,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                       onChange={(e) => {
                         setCustomWidth(e.target.value)
                       }}
+                      aria-label="Custom width"
                     />
                     <input
                       type="number"
@@ -757,12 +813,13 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                       onChange={(e) => {
                         setCustomHeight(e.target.value)
                       }}
+                      aria-label="Custom height"
                     />
                   </div>
                 )}
               </div>
               <div className="setting-item">
-                <label>{t('video_settings.max_fps')}</label>
+                <label htmlFor="max-fps">{t('video_settings.max_fps')}</label>
                 <ComboBox
                   value={maxFps === 'unlimited' ? '' : maxFps}
                   onChange={(val) => {
@@ -772,6 +829,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   validate={(val) => val === '' || /^\d+$/.test(val)}
                   fallbackValue=""
                   placeholder={t('video_settings.fps_options.unlimited')}
+                  ariaLabel={t('video_settings.max_fps')}
                   options={FPS_OPTIONS.map((fps) => ({
                     value: fps,
                     label: t('video_settings.fps_options.' + fps, fps + ' FPS'),
@@ -783,7 +841,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             <div className="section-title">{t('video_settings.audio_section')}</div>
             <div className="settings-grid">
               <div className="setting-item">
-                <label>{t('video_settings.audio_bitrate')}</label>
+                <label htmlFor="video-audio-bitrate">{t('video_settings.audio_bitrate')}</label>
                 <ComboBox
                   value={videoAudioBitrate}
                   onChange={(val) => {
@@ -791,12 +849,14 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   }}
                   placeholder="e.g. 192"
                   disabled={!audioEnabled}
+                  ariaLabel={t('video_settings.audio_bitrate')}
                   options={AUDIO_BITRATE_OPTIONS.map((br) => ({ value: br, label: br }))}
                 />
               </div>
               <div className="setting-item">
-                <label>
+                <label htmlFor="disable-audio">
                   <input
+                    id="disable-audio"
                     type="checkbox"
                     checked={!audioEnabled}
                     onChange={(e) => {
@@ -824,19 +884,21 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             <div className="section-title">{t('audio_settings.audio_section')}</div>
             <div className="settings-grid">
               <div className="setting-item">
-                <label>{t('audio_settings.bitrate')}</label>
+                <label htmlFor="audio-bitrate">{t('audio_settings.bitrate')}</label>
                 <ComboBox
                   value={audioBitrate}
                   onChange={(val) => {
                     setAudioBitrate(BITRATE_REGEX.test(val) ? val : '192')
                   }}
                   placeholder="e.g. 192"
+                  ariaLabel={t('audio_settings.bitrate')}
                   options={AUDIO_BITRATE_OPTIONS.map((br) => ({ value: br, label: br }))}
                 />
               </div>
               <div className="setting-item">
-                <label>
+                <label htmlFor="keep-metadata">
                   <input
+                    id="keep-metadata"
                     type="checkbox"
                     checked={keepMetadata}
                     onChange={(e) => {

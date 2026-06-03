@@ -17,13 +17,15 @@
     "electron:dev": "npm run build:preload && concurrently --kill-others --success first \"npm run dev\" \"npm run watch:preload\" \"wait-on http://localhost:5173 && cross-env NODE_ENV=development electron .\""
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.0",
     "axios": "^1.7.9",
     "i18next": "^26.0.8",
     "i18next-browser-languagedetector": "^8.2.1",
     "lucide-react": "^1.11.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-i18next": "^17.0.4"
+    "react-i18next": "^17.0.4",
+    "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

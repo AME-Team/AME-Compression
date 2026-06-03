@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, CheckCircle, XCircle, Loader2 } from 'lucide-react'
+import { X, CheckCircle, XCircle, Loader2, Clock, AlertCircle, Play } from 'lucide-react'
 import type { Job } from '../types'
 
 interface JobItemProps {
@@ -9,11 +9,40 @@ interface JobItemProps {
   onDismiss: (id: string) => void
 }
 
+const STATUS_CONFIG: Record<
+  string,
+  { icon: React.ReactNode; labelKey: string; ariaLabelKey: string }
+> = {
+  starting: {
+    icon: <Play size={12} />,
+    labelKey: 'status.starting',
+    ariaLabelKey: 'status.starting',
+  },
+  running: {
+    icon: <Loader2 size={12} className="spin" />,
+    labelKey: 'status.running',
+    ariaLabelKey: 'status.running',
+  },
+  success: {
+    icon: <CheckCircle size={12} />,
+    labelKey: 'status.success',
+    ariaLabelKey: 'status.success',
+  },
+  failed: {
+    icon: <XCircle size={12} />,
+    labelKey: 'status.failed',
+    ariaLabelKey: 'status.failed',
+  },
+}
+
 const JobItem: React.FC<JobItemProps> = ({ job, onCancel, onDismiss }) => {
   const { t } = useTranslation()
 
+  const statusConfig = STATUS_CONFIG[job.status]
+  const statusLabel = statusConfig ? t(statusConfig.labelKey) : job.status
+
   return (
-    <div className={`job-item ${job.status}`}>
+    <div className={`job-item ${job.status}`} role="listitem">
       <div className="job-info">
         <span className="job-type">{job.type === 'video' ? 'Video' : 'Audio'}</span>
         {job.filename && (
@@ -21,27 +50,33 @@ const JobItem: React.FC<JobItemProps> = ({ job, onCancel, onDismiss }) => {
             {job.filename}
           </span>
         )}
-        <span className={`job-status-badge ${job.status}`}>
-          {job.status === 'running' && <Loader2 size={14} className="spin" />}
-          {job.status === 'success' && <CheckCircle size={14} />}
-          {job.status === 'failed' && <XCircle size={14} />}
-          {job.status}
+        <span className={`job-status-badge ${job.status}`} role="status" aria-label={statusLabel}>
+          {statusConfig?.icon}
+          {statusLabel}
         </span>
       </div>
 
       {job.status === 'running' && job.progress && (
-        <div className="job-progress">
+        <div className="job-progress" aria-live="polite">
           <div className="progress-bar-wrapper">
-            <div className="progress-bar-bg">
+            <div
+              className="progress-bar-bg"
+              role="progressbar"
+              aria-valuenow={Math.round(job.progress.percent)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`${Math.round(job.progress.percent)}%`}
+            >
               <div
                 className="progress-bar-fill"
                 style={{ width: `${Math.min(100, job.progress.percent)}%` }}
-              ></div>
+              />
             </div>
             <span className="progress-percent">{Math.round(job.progress.percent)}%</span>
           </div>
           <div className="job-stats">
             <span className="stat-item">
+              <Clock size={10} />
               <span className="stat-label">{t('compress.eta')}:</span>
               <span className="stat-value">{formatTimeShort(job.progress.eta) || '---'}</span>
             </span>
@@ -83,7 +118,18 @@ const JobItem: React.FC<JobItemProps> = ({ job, onCancel, onDismiss }) => {
 
       {job.status === 'success' && job.result && (
         <div className="job-result">
-          <span className="result-compression">-{job.result.compression_ratio?.toFixed(1)}%</span>
+          <span className="result-compression" aria-label={t('compress.reduction')}>
+            <CheckCircle size={12} /> -{job.result.compression_ratio?.toFixed(1)}%{' '}
+            {t('compress.reduction')}
+          </span>
+        </div>
+      )}
+
+      {job.status === 'failed' && (
+        <div className="job-result">
+          <span className="result-compression" style={{ color: 'var(--color-error)' }}>
+            <AlertCircle size={12} /> {t('compress.failed')}
+          </span>
         </div>
       )}
 
@@ -93,6 +139,7 @@ const JobItem: React.FC<JobItemProps> = ({ job, onCancel, onDismiss }) => {
           onClick={() => {
             onCancel(job.id)
           }}
+          aria-label={t('compress.cancel')}
         >
           <X size={14} />
         </button>
@@ -154,7 +201,12 @@ const ProgressPanel: React.FC<ProgressPanelProps> = ({
   if (embedded) {
     if (jobs.length === 0) return null
     return (
-      <div className="job-list" style={{ maxHeight: 'none', overflowY: 'visible' }}>
+      <div
+        className="job-list"
+        style={{ maxHeight: 'none', overflowY: 'visible' }}
+        role="list"
+        aria-label={t('compress.progress')}
+      >
         {jobs.map((job) => (
           <JobItem key={job.id} job={job} onCancel={onCancel} onDismiss={onDismiss} />
         ))}
@@ -176,7 +228,7 @@ const ProgressPanel: React.FC<ProgressPanelProps> = ({
           <X size={16} />
         </button>
       </div>
-      <div className="job-list">
+      <div className="job-list" role="list" aria-label={t('compress.progress')}>
         {jobs.map((job) => (
           <JobItem key={job.id} job={job} onCancel={onCancel} onDismiss={onDismiss} />
         ))}
