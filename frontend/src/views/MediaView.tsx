@@ -339,6 +339,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [mediaType, setMediaType] = useState<'video' | 'audio'>('video')
   const [isDragging, setIsDragging] = useState(false)
   const [dropSuccess, setDropSuccess] = useState(false)
+  const dropSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentSettings: Omit<MediaProfile, 'name'> = useMemo(
     () => ({
@@ -442,7 +443,10 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         return [...prev, ...filtered]
       })
       setDropSuccess(true)
-      setTimeout(() => {
+      if (dropSuccessTimeoutRef.current) {
+        clearTimeout(dropSuccessTimeoutRef.current)
+      }
+      dropSuccessTimeoutRef.current = setTimeout(() => {
         setDropSuccess(false)
       }, 600)
     }
@@ -473,6 +477,14 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     return () => {
       window.removeEventListener('dragover', preventDefault)
       window.removeEventListener('drop', preventDefault)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (dropSuccessTimeoutRef.current) {
+        clearTimeout(dropSuccessTimeoutRef.current)
+      }
     }
   }, [])
 
