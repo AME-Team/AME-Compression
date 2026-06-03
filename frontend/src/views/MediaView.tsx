@@ -125,28 +125,7 @@ const ComboBox: React.FC<ComboBoxProps> = ({
         </button>
       </div>
       {open && (
-        <ul
-          role="listbox"
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            zIndex: 1000,
-            listStyle: 'none',
-            margin: 0,
-            padding: 0,
-            maxHeight: '200px',
-            overflowY: 'auto',
-            borderRadius: '8px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3)',
-          }}
-          className={
-            document.documentElement.getAttribute('data-theme') === 'light'
-              ? 'theme-light-dropdown'
-              : ''
-          }
-        >
+        <ul role="listbox" className="combobox-dropdown">
           {options.map((opt) => (
             <li
               key={opt.value}
@@ -184,6 +163,7 @@ interface AudioSettingsSectionProps {
   setDenoiseEnabled: (val: boolean) => void
   denoiseLevel: number
   setDenoiseLevel: (val: number) => void
+  disabled?: boolean
 }
 
 const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
@@ -196,117 +176,150 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
   setDenoiseEnabled,
   denoiseLevel,
   setDenoiseLevel,
-}) => (
-  <>
-    <div className="sub-section-title">{t('volume.title')}</div>
-    <div className="settings-grid">
-      <div className="setting-item">
-        <label htmlFor="volume-mode">{t('volume.mode')}</label>
-        <select
-          id="volume-mode"
-          value={volumeMode}
-          onChange={(e) => {
-            setVolumeMode(e.target.value)
-          }}
-        >
-          <option value="disabled">{t('volume.modes.disabled')}</option>
-          <option value="auto">{t('volume.modes.auto')}</option>
-          <option value="multiplier">{t('volume.modes.multiplier')}</option>
-          <option value="db">{t('volume.modes.db')}</option>
-        </select>
-      </div>
-      {(volumeMode === 'multiplier' || volumeMode === 'db') && (
-        <div className="setting-item">
-          <label htmlFor="volume-slider">
-            {volumeMode === 'multiplier' ? t('volume.multiplier_label') : t('volume.db_label')}:{' '}
-            {volumeValue}
-            {volumeMode === 'db' ? ' dB' : 'x'}
-          </label>
-          <input
-            id="volume-slider"
-            type="range"
-            min={volumeMode === 'multiplier' ? '0.1' : '-20'}
-            max={volumeMode === 'multiplier' ? '5.0' : '20'}
-            step={volumeMode === 'multiplier' ? '0.1' : '1'}
-            value={volumeValue}
-            onChange={(e) => {
-              setVolumeValue(parseFloat(e.target.value))
-            }}
-            aria-label={`${volumeMode === 'multiplier' ? t('volume.multiplier_label') : t('volume.db_label')}: ${volumeValue}`}
-          />
-        </div>
-      )}
-    </div>
+  disabled = false,
+}) => {
+  const isLight = denoiseLevel >= 0.0 && denoiseLevel < 0.3
+  const isMedium = denoiseLevel >= 0.3 && denoiseLevel < 0.6
+  const isStrong = denoiseLevel >= 0.6 && denoiseLevel <= 1.0
+  const activePresetLabel = isLight
+    ? t('denoise.presets.light')
+    : isMedium
+      ? t('denoise.presets.medium')
+      : isStrong
+        ? t('denoise.presets.strong')
+        : ''
 
-    <div className="sub-section-title">{t('denoise.title')}</div>
-    <div className="settings-grid">
-      <div className="setting-item">
-        <label htmlFor="denoise-toggle">
-          <input
-            id="denoise-toggle"
-            type="checkbox"
-            checked={denoiseEnabled}
-            onChange={(e) => {
-              setDenoiseEnabled(e.target.checked)
-            }}
-          />{' '}
-          {t('denoise.enable')}
-        </label>
+  return (
+    <>
+      <div className={`sub-section-title ${disabled ? 'disabled-label' : ''}`}>
+        {t('volume.title')}
       </div>
-      {denoiseEnabled && (
-        <div className="setting-item" style={{ gridColumn: 'span 2' }}>
-          <label htmlFor="denoise-slider">
-            {t('denoise.level')}: {denoiseLevel}
+      <div className="settings-grid">
+        <div className="setting-item">
+          <label htmlFor="volume-mode" className={disabled ? 'disabled-label' : ''}>
+            {t('volume.mode')}
           </label>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-            <button
-              className={`secondary-button ${denoiseLevel === 0.15 ? 'active' : ''}`}
-              onClick={() => {
-                setDenoiseLevel(0.15)
-              }}
-              style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
-              aria-pressed={denoiseLevel === 0.15}
-            >
-              {t('denoise.presets.light')}
-            </button>
-            <button
-              className={`secondary-button ${denoiseLevel === 0.4 ? 'active' : ''}`}
-              onClick={() => {
-                setDenoiseLevel(0.4)
-              }}
-              style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
-              aria-pressed={denoiseLevel === 0.4}
-            >
-              {t('denoise.presets.medium')}
-            </button>
-            <button
-              className={`secondary-button ${denoiseLevel === 0.7 ? 'active' : ''}`}
-              onClick={() => {
-                setDenoiseLevel(0.7)
-              }}
-              style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
-              aria-pressed={denoiseLevel === 0.7}
-            >
-              {t('denoise.presets.strong')}
-            </button>
-          </div>
-          <input
-            id="denoise-slider"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={denoiseLevel}
+          <select
+            id="volume-mode"
+            value={volumeMode}
+            disabled={disabled}
             onChange={(e) => {
-              setDenoiseLevel(parseFloat(e.target.value))
+              const nextMode = e.target.value
+              setVolumeMode(nextMode)
+              if (nextMode === 'multiplier') {
+                setVolumeValue(1.0)
+              } else {
+                setVolumeValue(0)
+              }
             }}
-            aria-label={`${t('denoise.level')}: ${denoiseLevel}`}
-          />
+          >
+            <option value="disabled">{t('volume.modes.disabled')}</option>
+            <option value="auto">{t('volume.modes.auto')}</option>
+            <option value="multiplier">{t('volume.modes.multiplier')}</option>
+            <option value="db">{t('volume.modes.db')}</option>
+          </select>
         </div>
-      )}
-    </div>
-  </>
-)
+        {(volumeMode === 'multiplier' || volumeMode === 'db') && (
+          <div className="setting-item">
+            <label htmlFor="volume-slider" className={disabled ? 'disabled-label' : ''}>
+              {volumeMode === 'multiplier' ? t('volume.multiplier_label') : t('volume.db_label')}:{' '}
+              {volumeValue}
+              {volumeMode === 'db' ? ' dB' : 'x'}
+            </label>
+            <input
+              id="volume-slider"
+              type="range"
+              min={volumeMode === 'multiplier' ? '0.1' : '-20'}
+              max={volumeMode === 'multiplier' ? '5.0' : '20'}
+              step={volumeMode === 'multiplier' ? '0.1' : '1'}
+              value={volumeValue}
+              disabled={disabled}
+              onChange={(e) => {
+                setVolumeValue(parseFloat(e.target.value))
+              }}
+              aria-label={`${volumeMode === 'multiplier' ? t('volume.multiplier_label') : t('volume.db_label')}: ${volumeValue}`}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className={`sub-section-title ${disabled ? 'disabled-label' : ''}`}>
+        {t('denoise.title')}
+      </div>
+      <div className="settings-grid">
+        <div className="setting-item">
+          <label htmlFor="denoise-toggle" className={disabled ? 'disabled-label' : ''}>
+            <input
+              id="denoise-toggle"
+              type="checkbox"
+              checked={denoiseEnabled}
+              disabled={disabled}
+              onChange={(e) => {
+                setDenoiseEnabled(e.target.checked)
+              }}
+            />{' '}
+            {t('denoise.enable')}
+          </label>
+        </div>
+        {denoiseEnabled && (
+          <div className="setting-item" style={{ gridColumn: 'span 2' }}>
+            <label htmlFor="denoise-slider" className={disabled ? 'disabled-label' : ''}>
+              {t('denoise.level')}: {denoiseLevel} ({activePresetLabel})
+            </label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+              <button
+                className={`secondary-button ${isLight ? 'active' : ''}`}
+                onClick={() => {
+                  setDenoiseLevel(0.15)
+                }}
+                style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
+                aria-pressed={isLight}
+                disabled={disabled}
+              >
+                {t('denoise.presets.light')}
+              </button>
+              <button
+                className={`secondary-button ${isMedium ? 'active' : ''}`}
+                onClick={() => {
+                  setDenoiseLevel(0.4)
+                }}
+                style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
+                aria-pressed={isMedium}
+                disabled={disabled}
+              >
+                {t('denoise.presets.medium')}
+              </button>
+              <button
+                className={`secondary-button ${isStrong ? 'active' : ''}`}
+                onClick={() => {
+                  setDenoiseLevel(0.7)
+                }}
+                style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
+                aria-pressed={isStrong}
+                disabled={disabled}
+              >
+                {t('denoise.presets.strong')}
+              </button>
+            </div>
+            <input
+              id="denoise-slider"
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={denoiseLevel}
+              disabled={disabled}
+              onChange={(e) => {
+                setDenoiseLevel(parseFloat(e.target.value))
+              }}
+              aria-label={`${t('denoise.level')}: ${denoiseLevel}`}
+            />
+          </div>
+        )}
+      </div>
+    </>
+  )
+}
 
 export interface MediaViewHandle {
   startCompression: () => Promise<void>
@@ -877,6 +890,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               setDenoiseEnabled={setDenoiseEnabled}
               denoiseLevel={denoiseLevel}
               setDenoiseLevel={setDenoiseLevel}
+              disabled={!audioEnabled}
             />
           </>
         ) : (

@@ -70,6 +70,7 @@ interface ProfileModalContentProps {
   onApplyDefaults: () => void
   onClose: () => void
   onNotify: (message: string) => void
+  setConfirmState: React.Dispatch<React.SetStateAction<ConfirmState>>
 }
 
 const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
@@ -79,11 +80,11 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
   onApplyDefaults,
   onClose,
   onNotify,
+  setConfirmState,
 }) => {
   const [profiles, setProfiles] = useState<MediaProfile[]>(loadProfiles)
   const [profileName, setProfileName] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
-  const [confirmState, setConfirmState] = useState<ConfirmState>(INITIAL_CONFIRM_STATE)
   const [saveFlash, setSaveFlash] = useState(false)
 
   const showMessage = useCallback((msg: string): void => {
@@ -246,18 +247,6 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
           {statusMessage}
         </div>
       )}
-      <ConfirmModal
-        open={confirmState.open}
-        title={confirmState.title}
-        message={confirmState.message}
-        confirmLabel={confirmState.confirmLabel}
-        cancelLabel={t('common.cancel')}
-        variant={confirmState.variant}
-        onConfirm={confirmState.onConfirm ?? (() => undefined)}
-        onCancel={() => {
-          setConfirmState(INITIAL_CONFIRM_STATE)
-        }}
-      />
     </div>
   )
 }
@@ -278,6 +267,7 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
   const [progressModalOpen, setProgressModalOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [confirmState, setConfirmState] = useState<ConfirmState>(INITIAL_CONFIRM_STATE)
   const profileModalRef = useRef<HTMLDivElement>(null)
   const progressModalRef = useRef<HTMLDivElement>(null)
   const prevIsCompressingRef = useRef(false)
@@ -419,6 +409,7 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
                 onApplyDefaults={onApplyDefaults}
                 onClose={closeProfileModal}
                 onNotify={showToast}
+                setConfirmState={setConfirmState}
               />
             </div>
           </div>
@@ -475,6 +466,18 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
           {toastMessage}
         </div>
       )}
+      <ConfirmModal
+        open={confirmState.open}
+        title={confirmState.title}
+        message={confirmState.message}
+        confirmLabel={confirmState.confirmLabel}
+        cancelLabel={t('common.cancel')}
+        variant={confirmState.variant}
+        onConfirm={confirmState.onConfirm ?? (() => undefined)}
+        onCancel={() => {
+          setConfirmState(INITIAL_CONFIRM_STATE)
+        }}
+      />
     </>
   )
 }
