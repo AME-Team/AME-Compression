@@ -844,12 +844,12 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                 <label htmlFor="video-audio-bitrate">{t('video_settings.audio_bitrate')}</label>
                 <ComboBox
                   value={videoAudioBitrate}
-                  onChange={(val) => {
-                    setVideoAudioBitrate(BITRATE_REGEX.test(val) ? val : '192')
-                  }}
+                  onChange={setVideoAudioBitrate}
                   placeholder="e.g. 192"
                   disabled={!audioEnabled}
                   ariaLabel={t('video_settings.audio_bitrate')}
+                  validate={BITRATE_REGEX.test.bind(BITRATE_REGEX)}
+                  fallbackValue="192"
                   options={AUDIO_BITRATE_OPTIONS.map((br) => ({ value: br, label: br }))}
                 />
               </div>
@@ -887,11 +887,11 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                 <label htmlFor="audio-bitrate">{t('audio_settings.bitrate')}</label>
                 <ComboBox
                   value={audioBitrate}
-                  onChange={(val) => {
-                    setAudioBitrate(BITRATE_REGEX.test(val) ? val : '192')
-                  }}
+                  onChange={setAudioBitrate}
                   placeholder="e.g. 192"
                   ariaLabel={t('audio_settings.bitrate')}
+                  validate={BITRATE_REGEX.test.bind(BITRATE_REGEX)}
+                  fallbackValue="192"
                   options={AUDIO_BITRATE_OPTIONS.map((br) => ({ value: br, label: br }))}
                 />
               </div>

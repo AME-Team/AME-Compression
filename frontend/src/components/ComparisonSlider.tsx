@@ -30,44 +30,26 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
     setPosition(pct)
   }, [])
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent): void => {
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>): void => {
       e.preventDefault()
+      e.currentTarget.setPointerCapture(e.pointerId)
       setIsDragging(true)
       updatePosition(e.clientX)
     },
     [updatePosition],
   )
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent): void => {
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>): void => {
       if (!isDragging) return
       updatePosition(e.clientX)
     },
     [isDragging, updatePosition],
   )
 
-  const handleMouseUp = useCallback((): void => {
-    setIsDragging(false)
-  }, [])
-
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent): void => {
-      setIsDragging(true)
-      updatePosition(e.touches[0]?.clientX ?? 0)
-    },
-    [updatePosition],
-  )
-
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent): void => {
-      if (!isDragging) return
-      updatePosition(e.touches[0]?.clientX ?? 0)
-    },
-    [isDragging, updatePosition],
-  )
-
-  const handleTouchEnd = useCallback((): void => {
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>): void => {
+    e.currentTarget.releasePointerCapture(e.pointerId)
     setIsDragging(false)
   }, [])
 
@@ -92,13 +74,9 @@ const ComparisonSlider: React.FC<ComparisonSliderProps> = ({
       aria-label={alt ?? t('a11y.comparison_slider')}
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
     >
       <div className="comparison-slider-label comparison-slider-label-after" aria-hidden="true">
         {afterLabel ?? t('a11y.after')}
