@@ -93,10 +93,6 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
     }, 3000)
   }, [])
 
-  const triggerSaveFlash = (): void => {
-    setSaveFlash(true)
-  }
-
   useEffect(() => {
     if (!saveFlash) return
     const timer = setTimeout(() => {
@@ -129,7 +125,7 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
           saveProfiles(updated)
           showMessage(t('profile.saved', { name }))
           setProfileName('')
-          triggerSaveFlash()
+          setSaveFlash(true)
         },
       })
       return
@@ -139,7 +135,7 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
     saveProfiles(updated)
     showMessage(t('profile.saved', { name }))
     setProfileName('')
-    triggerSaveFlash()
+    setSaveFlash(true)
   }
 
   const handleLoad = (profile: MediaProfile): void => {
@@ -185,6 +181,7 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSave()
           }}
+          aria-label={t('profile.name_placeholder')}
         />
         <button
           className="secondary-button profile-btn"
@@ -204,9 +201,9 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
         </button>
       </div>
       {profiles.length > 0 ? (
-        <div className="profile-list">
+        <div className="profile-list" role="list" aria-label={t('profile.title')}>
           {profiles.map((profile) => (
-            <div key={profile.name} className="profile-item">
+            <div key={profile.name} className="profile-item" role="listitem">
               <span className="profile-item-name" title={profile.name}>
                 {profile.name}
               </span>
@@ -239,13 +236,13 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
       ) : (
         <p
           className="text-muted"
-          style={{ fontSize: '0.9rem', textAlign: 'center', padding: '16px 0' }}
+          style={{ fontSize: '0.85rem', textAlign: 'center', padding: '16px 0' }}
         >
           {t('profile.no_profiles')}
         </p>
       )}
       {statusMessage && (
-        <div className="status-message" style={{ marginTop: '8px' }}>
+        <div className="status-message" style={{ marginTop: '8px' }} role="status">
           {statusMessage}
         </div>
       )}
@@ -334,7 +331,7 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
 
   return (
     <>
-      <div className="floating-bar">
+      <div className="floating-bar" role="toolbar" aria-label={t('compress.start')}>
         <div className="floating-bar-left">
           <button
             className="floating-bar-btn"
@@ -347,7 +344,7 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
             aria-expanded={profileModalOpen}
             data-profile-trigger
           >
-            <Save size={16} />
+            <Save size={15} />
             <span>{t('profile.title')}</span>
           </button>
 
@@ -361,12 +358,19 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
             data-progress-trigger
           >
             {runningJobs.length > 0 ? (
-              <Loader2 size={16} className="spin" />
+              <Loader2 size={15} className="spin" />
             ) : (
               <span className="floating-bar-btn-dot" />
             )}
             <span>{t('compress.progress')}</span>
-            {hasJobs && <span className="floating-bar-badge">{jobs.length}</span>}
+            {hasJobs && (
+              <span
+                className="floating-bar-badge"
+                aria-label={`${jobs.length} ${t('compress.progress').toLowerCase()}`}
+              >
+                {jobs.length}
+              </span>
+            )}
           </button>
         </div>
 
@@ -375,25 +379,29 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
             className="primary-button floating-bar-start-btn"
             onClick={handleStartClick}
             disabled={compressionDisabled || isCompressing}
+            aria-busy={isCompressing}
           >
-            {isCompressing ? <Loader2 className="spin" size={18} /> : <Play size={18} />}
+            {isCompressing ? <Loader2 className="spin" size={16} /> : <Play size={16} />}
             {t('compress.start')}
           </button>
         </div>
       </div>
 
       {profileModalOpen && (
-        <div className="modal-overlay" onClick={closeProfileModal}>
+        <div className="modal-overlay" onClick={closeProfileModal} role="presentation">
           <div
             className="modal-content"
             ref={profileModalRef}
             onClick={(e) => {
               e.stopPropagation()
             }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('profile.title')}
           >
             <div className="modal-header">
               <h3>
-                <Save size={18} /> {t('profile.title')}
+                <Save size={16} /> {t('profile.title')}
               </h3>
               <button
                 className="panel-close-button"
@@ -418,13 +426,20 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
       )}
 
       {progressModalOpen && (
-        <div className="modal-overlay" onClick={isCompressing ? undefined : closeProgressModal}>
+        <div
+          className="modal-overlay"
+          onClick={isCompressing ? undefined : closeProgressModal}
+          role="presentation"
+        >
           <div
             className="modal-content modal-content-progress"
             ref={progressModalRef}
             onClick={(e) => {
               e.stopPropagation()
             }}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('compress.progress')}
           >
             <div className="modal-header">
               <h3>{t('compress.progress')}</h3>
@@ -455,7 +470,11 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
           </div>
         </div>
       )}
-      {toastMessage && <div className="toast-notification">{toastMessage}</div>}
+      {toastMessage && (
+        <div className="toast-notification toast-success" role="status" aria-live="polite">
+          {toastMessage}
+        </div>
+      )}
     </>
   )
 }

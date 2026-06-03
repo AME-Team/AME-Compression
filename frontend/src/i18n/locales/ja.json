@@ -7,7 +7,8 @@
     "video": "動画",
     "audio": "音声",
     "video_audio": "動画 / 音声",
-    "settings": "設定"
+    "settings": "設定",
+    "main_navigation": "メインナビゲーション"
   },
   "file": {
     "select": "ファイルを選択",
@@ -173,7 +174,11 @@
     "ffmpeg_detected": "FFmpeg: 検出済み",
     "ffmpeg_not_found": "FFmpeg: 見つかりません",
     "ready": "準備完了",
-    "processing": "処理中..."
+    "processing": "処理中...",
+    "starting": "開始中",
+    "running": "処理中",
+    "success": "完了",
+    "failed": "失敗"
   },
   "common": {
     "ok": "OK",
@@ -245,5 +250,21 @@
     "select_profile": "プロファイルを選択",
     "overwrite_title": "プロファイルの上書き",
     "load_title": "プロファイルの読込"
+  },
+  "a11y": {
+    "skip_to_content": "メインコンテンツへスキップ",
+    "drop_zone_label": "圧縮ファイルをここに追加（ドラッグ＆ドロップまたはEnterキーで追加）",
+    "comparison_slider": "圧縮前後の比較スライダー",
+    "before": "圧縮前",
+    "after": "圧縮後",
+    "notifications": "通知"
+  },
+  "command_palette": {
+    "title": "コマンドパレット",
+    "placeholder": "コマンドを入力...",
+    "navigate": "選択",
+    "select": "実行",
+    "close": "閉じる",
+    "no_results": "結果が見つかりません"
   }
 }

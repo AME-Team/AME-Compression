@@ -7,7 +7,8 @@
     "video": "Video",
     "audio": "Audio",
     "video_audio": "Video / Audio",
-    "settings": "Settings"
+    "settings": "Settings",
+    "main_navigation": "Main navigation"
   },
   "file": {
     "select": "Select File",
@@ -173,7 +174,11 @@
     "ffmpeg_detected": "FFmpeg: Detected",
     "ffmpeg_not_found": "FFmpeg: Not Found",
     "ready": "Ready",
-    "processing": "Processing..."
+    "processing": "Processing...",
+    "starting": "Starting",
+    "running": "Running",
+    "success": "Complete",
+    "failed": "Failed"
   },
   "common": {
     "ok": "OK",
@@ -245,5 +250,21 @@
     "select_profile": "Select profile",
     "overwrite_title": "Overwrite Profile",
     "load_title": "Load Profile"
+  },
+  "a11y": {
+    "skip_to_content": "Skip to main content",
+    "drop_zone_label": "Add compression files here (drag and drop or press Enter to add)",
+    "comparison_slider": "Before/After comparison slider",
+    "before": "Before",
+    "after": "After",
+    "notifications": "Notifications"
+  },
+  "command_palette": {
+    "title": "Command Palette",
+    "placeholder": "Type a command...",
+    "navigate": "navigate",
+    "select": "select",
+    "close": "close",
+    "no_results": "No results found"
   }
 }
