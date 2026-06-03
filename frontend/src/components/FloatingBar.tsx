@@ -84,6 +84,7 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
   const [profileName, setProfileName] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
   const [confirmState, setConfirmState] = useState<ConfirmState>(INITIAL_CONFIRM_STATE)
+  const [saveFlash, setSaveFlash] = useState(false)
 
   const showMessage = useCallback((msg: string): void => {
     setStatusMessage(msg)
@@ -91,6 +92,20 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
       setStatusMessage('')
     }, 3000)
   }, [])
+
+  const triggerSaveFlash = (): void => {
+    setSaveFlash(true)
+  }
+
+  useEffect(() => {
+    if (!saveFlash) return
+    const timer = setTimeout(() => {
+      setSaveFlash(false)
+    }, 200)
+    return (): void => {
+      clearTimeout(timer)
+    }
+  }, [saveFlash])
 
   const handleSave = (): void => {
     const name = profileName.trim()
@@ -114,6 +129,7 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
           saveProfiles(updated)
           showMessage(t('profile.saved', { name }))
           setProfileName('')
+          triggerSaveFlash()
         },
       })
       return
@@ -123,6 +139,7 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
     saveProfiles(updated)
     showMessage(t('profile.saved', { name }))
     setProfileName('')
+    triggerSaveFlash()
   }
 
   const handleLoad = (profile: MediaProfile): void => {
@@ -164,7 +181,7 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
             setProfileName(e.target.value)
           }}
           placeholder={t('profile.name_placeholder')}
-          className="profile-name-input"
+          className={`profile-name-input${saveFlash ? ' save-flash' : ''}`}
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleSave()
           }}
