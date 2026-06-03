@@ -95,10 +95,17 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
 
   const triggerSaveFlash = (): void => {
     setSaveFlash(true)
-    setTimeout(() => {
+  }
+
+  useEffect(() => {
+    if (!saveFlash) return
+    const timer = setTimeout(() => {
       setSaveFlash(false)
     }, 200)
-  }
+    return (): void => {
+      clearTimeout(timer)
+    }
+  }, [saveFlash])
 
   const handleSave = (): void => {
     const name = profileName.trim()
