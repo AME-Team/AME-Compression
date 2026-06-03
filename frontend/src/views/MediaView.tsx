@@ -338,6 +338,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [failedFiles, setFailedFiles] = useState<string[]>([])
   const [mediaType, setMediaType] = useState<'video' | 'audio'>('video')
   const [isDragging, setIsDragging] = useState(false)
+  const [dropSuccess, setDropSuccess] = useState(false)
+  const dropSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const currentSettings: Omit<MediaProfile, 'name'> = useMemo(
     () => ({
@@ -440,6 +442,13 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         const filtered = newPaths.filter((p) => !prev.includes(p))
         return [...prev, ...filtered]
       })
+      setDropSuccess(true)
+      if (dropSuccessTimeoutRef.current) {
+        clearTimeout(dropSuccessTimeoutRef.current)
+      }
+      dropSuccessTimeoutRef.current = setTimeout(() => {
+        setDropSuccess(false)
+      }, 600)
     }
   }
 
@@ -468,6 +477,14 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     return () => {
       window.removeEventListener('dragover', preventDefault)
       window.removeEventListener('drop', preventDefault)
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (dropSuccessTimeoutRef.current) {
+        clearTimeout(dropSuccessTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -560,7 +577,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       </header>
 
       <section
-        className={`card drop-zone ${isDragging ? 'dragging' : ''}`}
+        className={`card drop-zone ${isDragging ? 'dragging' : ''} ${dropSuccess ? 'drop-success' : ''}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
