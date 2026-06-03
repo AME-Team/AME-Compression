@@ -185,7 +185,9 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
     ? t('denoise.presets.light')
     : isMedium
       ? t('denoise.presets.medium')
-      : t('denoise.presets.strong')
+      : isStrong
+        ? t('denoise.presets.strong')
+        : ''
 
   return (
     <>
@@ -268,7 +270,7 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
               <button
                 className={`secondary-button ${isLight ? 'active' : ''}`}
                 onClick={() => {
-                  if (!disabled) setDenoiseLevel(0.15)
+                  setDenoiseLevel(0.15)
                 }}
                 style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
                 aria-pressed={isLight}
@@ -279,7 +281,7 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
               <button
                 className={`secondary-button ${isMedium ? 'active' : ''}`}
                 onClick={() => {
-                  if (!disabled) setDenoiseLevel(0.4)
+                  setDenoiseLevel(0.4)
                 }}
                 style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
                 aria-pressed={isMedium}
@@ -290,7 +292,7 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
               <button
                 className={`secondary-button ${isStrong ? 'active' : ''}`}
                 onClick={() => {
-                  if (!disabled) setDenoiseLevel(0.7)
+                  setDenoiseLevel(0.7)
                 }}
                 style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
                 aria-pressed={isStrong}
