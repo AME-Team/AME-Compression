@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 interface SelectDropdownProps {
+  id?: string
   value: string
   onChange: (val: string) => void
   options: { value: string; label: string }[]
@@ -10,6 +11,7 @@ interface SelectDropdownProps {
 }
 
 const SelectDropdown: React.FC<SelectDropdownProps> = ({
+  id,
   value,
   onChange,
   options,
@@ -38,8 +40,17 @@ const SelectDropdown: React.FC<SelectDropdownProps> = ({
   const selectedLabel = options.find((o) => o.value === value)?.label ?? value
 
   return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
+    <div
+      ref={containerRef}
+      style={{ position: 'relative' }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          setOpen(false)
+        }
+      }}
+    >
       <button
+        id={id}
         type="button"
         className="select-dropdown-trigger"
         disabled={disabled}

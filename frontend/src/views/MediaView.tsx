@@ -201,6 +201,7 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
             {t('volume.mode')}
           </label>
           <SelectDropdown
+            id="volume-mode"
             value={volumeMode}
             onChange={(val) => {
               setVolumeMode(val)
@@ -796,6 +797,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               <div className="setting-item">
                 <label htmlFor="max-resolution">{t('video_settings.max_resolution')}</label>
                 <SelectDropdown
+                  id="max-resolution"
                   value={maxResolution}
                   onChange={(val) => {
                     setMaxResolution(val)

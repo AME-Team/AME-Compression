@@ -88,6 +88,7 @@ const SettingsView: React.FC = () => {
           <div className="setting-item">
             <label htmlFor="language-select">{t('settings.language')}</label>
             <SelectDropdown
+              id="language-select"
               value={settings.language}
               onChange={(val) => {
                 handleLanguageChange(val)
