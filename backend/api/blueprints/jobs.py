@@ -4,19 +4,11 @@ from typing import Any
 from flask import Blueprint, Response, jsonify, request
 
 from ...audio import compress_audio_service
-from ...ffmpeg import find_ffmpeg, find_ffprobe
+from ...ffmpeg import resolve_ffmpeg_paths
 from ...video import compress_video_service
 from ..job_runner import job_runner
 
 jobs_bp = Blueprint("jobs", __name__)
-
-
-def _resolve_ffmpeg_paths() -> tuple[str, str]:
-    """Resolve ffmpeg and ffprobe paths, returning safe defaults on failure."""
-    try:
-        return find_ffmpeg(), find_ffprobe()
-    except FileNotFoundError:
-        return "ffmpeg", "ffprobe"
 
 
 @jobs_bp.route("/video", methods=["POST"])
@@ -41,7 +33,7 @@ def start_video_compression() -> tuple[Response, int]:
     if preset is not None and not (0 <= preset <= max_preset):
         return jsonify({"error": f"Preset must be between 0 and {max_preset}"}), 400
 
-    ffmpeg_path, ffprobe_path = _resolve_ffmpeg_paths()
+    ffmpeg_path, ffprobe_path = resolve_ffmpeg_paths()
 
     task_id = job_runner.start_task(
         "video",
@@ -74,7 +66,7 @@ def start_audio_compression() -> tuple[Response, int]:
     if not Path(input_path).exists():
         return jsonify({"error": f"Input path does not exist: {input_path}"}), 404
 
-    ffmpeg_path, ffprobe_path = _resolve_ffmpeg_paths()
+    ffmpeg_path, ffprobe_path = resolve_ffmpeg_paths()
 
     task_id = job_runner.start_task(
         "audio",

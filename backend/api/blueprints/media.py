@@ -4,19 +4,11 @@ from typing import Any
 from flask import Blueprint, Response, jsonify, request
 
 from ...audio import get_audio_info_safe
-from ...ffmpeg import find_ffmpeg, find_ffprobe
+from ...ffmpeg import resolve_ffmpeg_paths
 from ...video import get_video_info_safe
 from ...volume import analyze_volume_level
 
 media_bp = Blueprint("media", __name__)
-
-
-def _resolve_ffmpeg_paths() -> tuple[str, str]:
-    """Resolve ffmpeg and ffprobe paths, returning safe defaults on failure."""
-    try:
-        return find_ffmpeg(), find_ffprobe()
-    except FileNotFoundError:
-        return "ffmpeg", "ffprobe"
 
 
 @media_bp.route("/media-info", methods=["GET"])
@@ -29,7 +21,7 @@ def get_info() -> Response | tuple[Response, int]:
     if not path_obj.exists():
         return jsonify({"error": "File not found"}), 404
 
-    _, ffprobe_path = _resolve_ffmpeg_paths()
+    _, ffprobe_path = resolve_ffmpeg_paths()
 
     # Try video info first
     info = get_video_info_safe(path_obj, ffprobe_path)
@@ -62,7 +54,7 @@ def analyze_volume_endpoint() -> Response | tuple[Response, int]:
         return jsonify({"error": "File not found"}), 404
 
     try:
-        ffmpeg_path, _ = _resolve_ffmpeg_paths()
+        ffmpeg_path, _ = resolve_ffmpeg_paths()
         result = analyze_volume_level(path_obj, ffmpeg_path)
         if result["mean_volume"] is not None:
             return jsonify(result)

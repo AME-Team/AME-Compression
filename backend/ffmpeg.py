@@ -108,6 +108,20 @@ def get_ffmpeg_executables() -> tuple[str, str]:
         return "ffmpeg", "ffprobe"
 
 
+def resolve_ffmpeg_paths() -> tuple[str, str]:
+    """Resolve ffmpeg and ffprobe paths with fallback to bare names.
+
+    This is the centralized entry point for all API blueprints that need
+    ffmpeg/ffprobe paths.  It tries bundled then system discovery and
+    falls back to bare executable names so that callers can still attempt
+    to invoke the tools (letting the OS handle PATH resolution).
+
+    Returns:
+        tuple[str, str]: (ffmpeg_path, ffprobe_path)
+    """
+    return get_ffmpeg_executables()
+
+
 def get_video_info(video_path: str | Path, ffprobe_path: str = "ffprobe") -> dict[str, Any] | None:
     """Get video information using ffprobe.
 

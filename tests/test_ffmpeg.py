@@ -8,7 +8,10 @@ from backend.ffmpeg import find_ffmpeg, find_ffprobe, get_ffmpeg_executables
 
 class TestFindFfmpeg:
     def test_finds_system_ffmpeg(self) -> None:
-        with patch("backend.ffmpeg._get_bundled_dir") as mock_dir:
+        with (
+            patch("backend.ffmpeg._get_bundled_dir") as mock_dir,
+            patch("backend.ffmpeg.shutil.which", return_value="/usr/bin/ffmpeg"),
+        ):
             fake_bin = Path("/nonexistent/bundled/dir")
             mock_dir.return_value = fake_bin
             result = find_ffmpeg()
@@ -39,7 +42,10 @@ class TestFindFfmpeg:
 
 class TestFindFfprobe:
     def test_finds_system_ffprobe(self) -> None:
-        with patch("backend.ffmpeg._get_bundled_dir") as mock_dir:
+        with (
+            patch("backend.ffmpeg._get_bundled_dir") as mock_dir,
+            patch("backend.ffmpeg.shutil.which", return_value="/usr/bin/ffprobe"),
+        ):
             fake_bin = Path("/nonexistent/bundled/dir")
             mock_dir.return_value = fake_bin
             result = find_ffprobe()
