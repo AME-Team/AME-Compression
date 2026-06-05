@@ -615,6 +615,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     if (qualityResult.recommend_denoise && qualityResult.denoise_level !== null) {
       setDenoiseEnabled(true)
       setDenoiseLevel(qualityResult.denoise_level)
+    } else {
+      setDenoiseEnabled(false)
     }
     setQualityResult(null)
   }
@@ -809,8 +811,14 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                 style={{
                   padding: '12px 16px',
                   borderRadius: '8px',
-                  background: 'var(--color-info-bg, rgba(59, 130, 246, 0.08))',
-                  border: '1px solid var(--color-info-border, rgba(59, 130, 246, 0.2))',
+                  background:
+                    qualityResult.status === 'error'
+                      ? 'var(--color-error-bg, rgba(239, 68, 68, 0.08))'
+                      : 'var(--color-info-bg, rgba(59, 130, 246, 0.08))',
+                  border:
+                    qualityResult.status === 'error'
+                      ? '1px solid var(--color-error-border, rgba(239, 68, 68, 0.2))'
+                      : '1px solid var(--color-info-border, rgba(59, 130, 246, 0.2))',
                   marginBottom: '12px',
                 }}
                 role="alert"

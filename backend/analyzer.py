@@ -25,9 +25,57 @@ from .config import (
     DEFAULT_CRF,
     DEFAULT_DENOISE_LEVEL,
 )
-from .ffmpeg import get_detailed_media_info, get_video_info_safe
+from .ffmpeg import get_detailed_media_info
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_fps(video_stream: dict[str, Any]) -> float | None:
+    """Parse FPS from a video stream's r_frame_rate field."""
+    fps_str = video_stream.get("r_frame_rate")
+    if not fps_str:
+        return None
+    if "/" in fps_str:
+        with contextlib.suppress(ValueError, ZeroDivisionError):
+            num, den = fps_str.split("/")
+            if float(den) != 0:
+                return float(num) / float(den)
+        return None
+    with contextlib.suppress(ValueError):
+        return float(fps_str)
+    return None
+
+
+def _parse_duration(video_stream: dict[str, Any], fmt_info: dict[str, Any]) -> float | None:
+    """Parse duration from video stream or format info."""
+    duration_str = video_stream.get("duration")
+    if duration_str is not None:
+        with contextlib.suppress(ValueError):
+            return float(duration_str)
+    duration_str = fmt_info.get("duration")
+    if duration_str is not None:
+        with contextlib.suppress(ValueError):
+            return float(duration_str)
+    return None
+
+
+def _parse_bit_rate(
+    video_stream: dict[str, Any], fmt_info: dict[str, Any], file_path: Path, duration: float | None
+) -> int | None:
+    """Parse bit rate from video stream, format, or file size fallback."""
+    br_str = video_stream.get("bit_rate")
+    if br_str is not None:
+        with contextlib.suppress(ValueError, TypeError):
+            return int(br_str)
+    br_str = fmt_info.get("bit_rate")
+    if br_str is not None:
+        with contextlib.suppress(ValueError, TypeError):
+            return int(br_str)
+    if duration and duration > 0:
+        with contextlib.suppress(OSError):
+            file_size = file_path.stat().st_size
+            return int((file_size * 8) / duration)
+    return None
 
 
 def _extract_video_metadata(
@@ -43,37 +91,32 @@ def _extract_video_metadata(
     if not media_path.exists():
         return None
 
-    basic_info = get_video_info_safe(media_path, ffprobe_path)
-    if not basic_info:
+    detailed = get_detailed_media_info(media_path, ffprobe_path)
+    if not detailed:
         return None
 
-    detailed = get_detailed_media_info(media_path, ffprobe_path)
-    bit_rate = None
-    codec_name = ""
+    streams = detailed.get("streams", [])
+    video_stream = next((s for s in streams if s.get("codec_type") == "video"), None)
+    if not video_stream:
+        return None
 
-    if detailed:
-        streams = detailed.get("streams", [])
-        for stream in streams:
-            if stream.get("codec_type") == "video":
-                br = stream.get("bit_rate")
-                if br is not None:
-                    with contextlib.suppress(ValueError, TypeError):
-                        bit_rate = int(br)
-                codec_name = stream.get("codec_name", "")
-                break
+    try:
+        width = int(video_stream.get("width"))
+        height = int(video_stream.get("height"))
+    except (ValueError, TypeError):
+        return None
 
-        if bit_rate is None:
-            fmt = detailed.get("format", {})
-            br = fmt.get("bit_rate")
-            if br is not None:
-                with contextlib.suppress(ValueError, TypeError):
-                    bit_rate = int(br)
+    fmt_info = detailed.get("format", {})
+    fps = _parse_fps(video_stream)
+    duration = _parse_duration(video_stream, fmt_info)
+    bit_rate = _parse_bit_rate(video_stream, fmt_info, media_path, duration)
+    codec_name = video_stream.get("codec_name", "")
 
     return {
-        "width": basic_info.get("width"),
-        "height": basic_info.get("height"),
-        "fps": basic_info.get("fps"),
-        "duration": basic_info.get("duration"),
+        "width": width,
+        "height": height,
+        "fps": fps,
+        "duration": duration,
         "bit_rate": bit_rate,
         "codec_name": codec_name,
     }
