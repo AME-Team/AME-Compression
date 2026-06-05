@@ -2,36 +2,124 @@
 
 import contextlib
 import json
+import logging
 import platform
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, cast
 
+logger = logging.getLogger(__name__)
+
+
+def _get_executable_names() -> tuple[str, str]:
+    """Return platform-appropriate ffmpeg and ffprobe executable names."""
+    is_windows = platform.system() == "Windows"
+    ffmpeg_name = "ffmpeg.exe" if is_windows else "ffmpeg"
+    ffprobe_name = "ffprobe.exe" if is_windows else "ffprobe"
+    return ffmpeg_name, ffprobe_name
+
+
+def _get_bundled_dir() -> Path:
+    """Return the directory where bundled ffmpeg binaries are expected."""
+    return Path(__file__).parent.parent.resolve() / "bin"
+
+
+def find_ffmpeg() -> str:
+    """Locate the ffmpeg executable with the following priority:
+
+    1. Bundled ffmpeg at ``<project_root>/bin/ffmpeg(.exe)``
+    2. System ffmpeg discoverable via ``PATH`` (``shutil.which``)
+    3. Raise ``FileNotFoundError`` if neither is found
+
+    Returns:
+        Absolute path to the ffmpeg executable as a string.
+
+    Raises:
+        FileNotFoundError: ffmpeg cannot be located.
+    """
+    ffmpeg_name, _ = _get_executable_names()
+    bundled_dir = _get_bundled_dir()
+
+    bundled = bundled_dir / ffmpeg_name
+    if bundled.exists():
+        logger.info("Using bundled FFmpeg: %s", bundled)
+        return str(bundled)
+
+    system = shutil.which("ffmpeg")
+    if system is not None:
+        logger.info("Using system FFmpeg: %s", system)
+        return system
+
+    raise FileNotFoundError(
+        "ffmpeg が見つかりません。FFmpeg をインストールするか、"
+        "bin/ ディレクトリに配置してください。"
+        " / FFmpeg not found. Install FFmpeg or place it in the bin/ directory."
+    )
+
+
+def find_ffprobe() -> str:
+    """Locate the ffprobe executable with the following priority:
+
+    1. Bundled ffprobe at ``<project_root>/bin/ffprobe(.exe)``
+    2. System ffprobe discoverable via ``PATH`` (``shutil.which``)
+    3. Raise ``FileNotFoundError`` if neither is found
+
+    Returns:
+        Absolute path to the ffprobe executable as a string.
+
+    Raises:
+        FileNotFoundError: ffprobe cannot be located.
+    """
+    _, ffprobe_name = _get_executable_names()
+    bundled_dir = _get_bundled_dir()
+
+    bundled = bundled_dir / ffprobe_name
+    if bundled.exists():
+        logger.info("Using bundled ffprobe: %s", bundled)
+        return str(bundled)
+
+    system = shutil.which("ffprobe")
+    if system is not None:
+        logger.info("Using system ffprobe: %s", system)
+        return system
+
+    raise FileNotFoundError(
+        "ffprobe が見つかりません。FFmpeg をインストールするか、"
+        "bin/ ディレクトリに配置してください。"
+        " / ffprobe not found. Install FFmpeg or place it in the bin/ directory."
+    )
+
 
 def get_ffmpeg_executables() -> tuple[str, str]:
     """Detect OS and return appropriate FFmpeg executable paths.
-    Checks for local FFmpeg executables in the bin directory first.
+
+    Checks for bundled FFmpeg executables in the ``bin/`` directory first,
+    then falls back to the system PATH.  If neither can be found the
+    function returns ``("ffmpeg", "ffprobe")`` so that callers that already
+    handle ``FileNotFoundError`` from subprocess can degrade gracefully.
 
     Returns:
         tuple: (ffmpeg_path, ffprobe_path)
     """
-    script_dir = Path(__file__).parent.parent.resolve()
+    try:
+        return find_ffmpeg(), find_ffprobe()
+    except FileNotFoundError:
+        return "ffmpeg", "ffprobe"
 
-    # Determine executable names based on OS
-    is_windows = platform.system() == "Windows"
-    ffmpeg_name = "ffmpeg.exe" if is_windows else "ffmpeg"
-    ffprobe_name = "ffprobe.exe" if is_windows else "ffprobe"
 
-    # Check for local FFmpeg executables in bin directory
-    local_ffmpeg = script_dir / "bin" / ffmpeg_name
-    local_ffprobe = script_dir / "bin" / ffprobe_name
+def resolve_ffmpeg_paths() -> tuple[str, str]:
+    """Resolve ffmpeg and ffprobe paths with fallback to bare names.
 
-    if local_ffmpeg.exists() and local_ffprobe.exists():
-        print(f"Using local FFmpeg: {local_ffmpeg}")
-        return str(local_ffmpeg), str(local_ffprobe)
+    This is the centralized entry point for all API blueprints that need
+    ffmpeg/ffprobe paths.  It tries bundled then system discovery and
+    falls back to bare executable names so that callers can still attempt
+    to invoke the tools (letting the OS handle PATH resolution).
 
-    # Fall back to system FFmpeg
-    return "ffmpeg", "ffprobe"
+    Returns:
+        tuple[str, str]: (ffmpeg_path, ffprobe_path)
+    """
+    return get_ffmpeg_executables()
 
 
 def get_video_info(video_path: str | Path, ffprobe_path: str = "ffprobe") -> dict[str, Any] | None:

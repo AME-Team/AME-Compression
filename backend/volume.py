@@ -3,7 +3,6 @@
 import math
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 from .config import (
@@ -67,8 +66,11 @@ def analyze_volume_level(
             max_volume = float(max_match.group(1))
 
     except FileNotFoundError:
-        print("Error: FFmpeg not found. Please ensure FFmpeg is installed and added to PATH.")
-        sys.exit(1)
+        return {
+            "mean_volume": None,
+            "max_volume": None,
+            "recommended_gain": None,
+        }
 
     # Calculate recommended gain
     recommended_gain = None
