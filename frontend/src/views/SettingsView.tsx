@@ -62,7 +62,13 @@ const SettingsView: React.FC = () => {
 
   const handleThemeChange = (mode: 'light' | 'dark' | 'system'): void => {
     setSettings({ ...settings, appearance_mode: mode })
-    document.documentElement.setAttribute('data-theme', mode)
+    const resolvedTheme =
+      mode === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          ? 'dark'
+          : 'light'
+        : mode
+    document.documentElement.setAttribute('data-theme', resolvedTheme)
     void window.electronAPI?.setThemeColor(mode)
   }
 
