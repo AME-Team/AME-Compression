@@ -12,6 +12,7 @@ import { Upload, Settings, FileSearch, ChevronDown, X } from 'lucide-react'
 import { api } from '../services/api'
 import type { MediaProfile } from '../profiles'
 import { DEFAULT_SETTINGS } from '../profiles'
+import SelectDropdown from '../components/SelectDropdown'
 
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'flac', 'm4a'])
 
@@ -199,25 +200,25 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
           <label htmlFor="volume-mode" className={disabled ? 'disabled-label' : ''}>
             {t('volume.mode')}
           </label>
-          <select
-            id="volume-mode"
+          <SelectDropdown
             value={volumeMode}
-            disabled={disabled}
-            onChange={(e) => {
-              const nextMode = e.target.value
-              setVolumeMode(nextMode)
-              if (nextMode === 'multiplier') {
+            onChange={(val) => {
+              setVolumeMode(val)
+              if (val === 'multiplier') {
                 setVolumeValue(1.0)
               } else {
                 setVolumeValue(0)
               }
             }}
-          >
-            <option value="disabled">{t('volume.modes.disabled')}</option>
-            <option value="auto">{t('volume.modes.auto')}</option>
-            <option value="multiplier">{t('volume.modes.multiplier')}</option>
-            <option value="db">{t('volume.modes.db')}</option>
-          </select>
+            disabled={disabled}
+            ariaLabel={t('volume.mode')}
+            options={[
+              { value: 'disabled', label: t('volume.modes.disabled') },
+              { value: 'auto', label: t('volume.modes.auto') },
+              { value: 'multiplier', label: t('volume.modes.multiplier') },
+              { value: 'db', label: t('volume.modes.db') },
+            ]}
+          />
         </div>
         {(volumeMode === 'multiplier' || volumeMode === 'db') && (
           <div className="setting-item">
@@ -794,20 +795,21 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               </div>
               <div className="setting-item">
                 <label htmlFor="max-resolution">{t('video_settings.max_resolution')}</label>
-                <select
-                  id="max-resolution"
+                <SelectDropdown
                   value={maxResolution}
-                  onChange={(e) => {
-                    setMaxResolution(e.target.value)
+                  onChange={(val) => {
+                    setMaxResolution(val)
                   }}
-                >
-                  <option value="original">{t('video_settings.resolution.original')}</option>
-                  <option value="3840x2160">{t('video_settings.resolution.4k')}</option>
-                  <option value="1920x1080">{t('video_settings.resolution.1080p')}</option>
-                  <option value="1280x720">{t('video_settings.resolution.720p')}</option>
-                  <option value="854x480">{t('video_settings.resolution.480p')}</option>
-                  <option value="custom">{t('video_settings.resolution.custom')}</option>
-                </select>
+                  ariaLabel={t('video_settings.max_resolution')}
+                  options={[
+                    { value: 'original', label: t('video_settings.resolution.original') },
+                    { value: '3840x2160', label: t('video_settings.resolution.4k') },
+                    { value: '1920x1080', label: t('video_settings.resolution.1080p') },
+                    { value: '1280x720', label: t('video_settings.resolution.720p') },
+                    { value: '854x480', label: t('video_settings.resolution.480p') },
+                    { value: 'custom', label: t('video_settings.resolution.custom') },
+                  ]}
+                />
                 {maxResolution === 'custom' && (
                   <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                     <input

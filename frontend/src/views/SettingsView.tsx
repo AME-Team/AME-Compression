@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Save, RefreshCw, Moon, Sun, Monitor } from 'lucide-react'
 import { api, initializeApi } from '../services/api'
 import type { AppSettings } from '../types'
+import SelectDropdown from '../components/SelectDropdown'
 
 const SettingsView: React.FC = () => {
   const { t, i18n } = useTranslation()
@@ -86,16 +87,17 @@ const SettingsView: React.FC = () => {
         <div className="settings-grid">
           <div className="setting-item">
             <label htmlFor="language-select">{t('settings.language')}</label>
-            <select
-              id="language-select"
+            <SelectDropdown
               value={settings.language}
-              onChange={(e) => {
-                handleLanguageChange(e.target.value)
+              onChange={(val) => {
+                handleLanguageChange(val)
               }}
-            >
-              <option value="en">{t('settings.language_names.en')}</option>
-              <option value="ja">{t('settings.language_names.ja')}</option>
-            </select>
+              ariaLabel={t('settings.language')}
+              options={[
+                { value: 'en', label: t('settings.language_names.en') },
+                { value: 'ja', label: t('settings.language_names.ja') },
+              ]}
+            />
           </div>
           <div className="setting-item">
             <label>{t('settings.theme')}</label>
