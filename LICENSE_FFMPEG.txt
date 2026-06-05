@@ -1,0 +1,27 @@
+FFmpeg License Notice
+=====================
+
+This distribution contains FFmpeg binaries (ffmpeg and/or ffprobe).
+
+FFmpeg is licensed under the GNU Lesser General Public License (LGPL) version 2.1
+or later.  The full text of the LGPL is available at:
+
+    https://www.gnu.org/licenses/lgpl-2.1.html
+
+FFmpeg source code is available from the official website:
+
+    https://ffmpeg.org/
+
+The FFmpeg binaries bundled with this application are unmodified builds obtained
+from the FFmpeg project.  No source code modifications have been made.
+
+If you would like to obtain the source code for FFmpeg, please visit:
+
+    https://ffmpeg.org/download.html
+
+For compliance with the LGPL license, you have the right to replace the bundled
+FFmpeg binaries with your own compiled versions.  To do so, replace the files
+located in the ``bin/`` directory next to the application executable.
+
+This application itself (AmeCompression) is licensed under the MIT License and
+is a separate work from FFmpeg.

@@ -16,13 +16,20 @@ Featuring a modern, intuitive interface powered by Electron, React, and Flask.
 
 ### 1. Prerequisites (FFmpeg)
 
-You must have FFmpeg installed on your system.
+AmeCompression is distributed in two forms:
+
+| Build Type | Description | Platforms |
+|---|---|---|
+| **Bundled** | FFmpeg binaries are included — no separate installation needed. | Windows |
+| **Non-bundled** | FFmpeg must be installed on the system. | Windows / macOS / Linux |
+
+For the **non-bundled** build, install FFmpeg on your system:
 
 - **Windows**: `choco install ffmpeg` or download from [ffmpeg.org](https://ffmpeg.org/download.html)
 - **macOS**: `brew install ffmpeg`
 - **Linux**: `sudo apt install ffmpeg libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 libgbm1 libasound2`
 
-*Note: You can also place `ffmpeg` and `ffprobe` executables in a `bin/` folder inside the project root.*
+Alternatively, you can place `ffmpeg` and `ffprobe` executables in a `bin/` folder inside the project root — they will be detected automatically at runtime.
 
 ### 2. Run from Source
 
@@ -62,7 +69,13 @@ npm install
 npm run build
 
 # Build Standalone (using PyInstaller for backend)
+
+# Non-bundled build (default — uses system FFmpeg at runtime)
 uv run scripts/build.py
+
+# Bundled build (includes FFmpeg binaries from bin/)
+# First, place ffmpeg/ffprobe executables in the bin/ directory
+uv run scripts/build.py --with-ffmpeg
 ```
 
 ## 🧪 Testing
@@ -89,3 +102,6 @@ npm --prefix frontend run format:check
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+When using the **bundled** build, please also review `LICENSE_FFMPEG.txt` for
+FFmpeg licensing information (LGPL v2.1+).
