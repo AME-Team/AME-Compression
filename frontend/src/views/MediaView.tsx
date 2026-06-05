@@ -8,10 +8,11 @@ import React, {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { Upload, Settings, FileSearch, ChevronDown, X } from 'lucide-react'
+import { Upload, Settings, FileSearch, ChevronDown, X, Sparkles } from 'lucide-react'
 import { api } from '../services/api'
 import type { MediaProfile } from '../profiles'
 import { DEFAULT_SETTINGS } from '../profiles'
+import type { QualityAnalysisResult } from '../types'
 import SelectDropdown from '../components/SelectDropdown'
 
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'flac', 'm4a'])
@@ -369,6 +370,9 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [dropSuccess, setDropSuccess] = useState(false)
   const dropSuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [analyzingQuality, setAnalyzingQuality] = useState(false)
+  const [qualityResult, setQualityResult] = useState<QualityAnalysisResult | null>(null)
+
   const currentSettings: Omit<MediaProfile, 'name'> = useMemo(
     () => ({
       mediaType,
@@ -586,6 +590,35 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     }
   }
 
+  const handleAnalyzeQuality = async (): Promise<void> => {
+    if (inputPaths.length === 0) return
+    const firstFile = inputPaths[0]
+    if (!firstFile || detectMediaType(firstFile) !== 'video') return
+
+    setAnalyzingQuality(true)
+    setQualityResult(null)
+    try {
+      const response = await api.post<QualityAnalysisResult>('/media/analyze-settings', {
+        path: firstFile,
+      })
+      setQualityResult(response.data)
+    } catch (error) {
+      console.error('Quality analysis failed', error)
+    } finally {
+      setAnalyzingQuality(false)
+    }
+  }
+
+  const applyQualitySettings = (): void => {
+    if (qualityResult?.status !== 'success') return
+    setCrf(qualityResult.recommended_crf)
+    if (qualityResult.recommend_denoise && qualityResult.denoise_level !== null) {
+      setDenoiseEnabled(true)
+      setDenoiseLevel(qualityResult.denoise_level)
+    }
+    setQualityResult(null)
+  }
+
   useImperativeHandle(ref, () => ({
     startCompression,
     getCurrentSettings: () => currentSettings,
@@ -759,6 +792,69 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         {mediaType === 'video' ? (
           <>
             <div className="section-title">{t('video_settings.video_section')}</div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+              <button
+                className="secondary-button"
+                disabled={analyzingQuality || inputPaths.length === 0}
+                onClick={() => void handleAnalyzeQuality()}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}
+                aria-label={t('quality_analysis.analyze')}
+              >
+                <Sparkles size={14} />
+                {analyzingQuality ? t('quality_analysis.analyzing') : t('quality_analysis.analyze')}
+              </button>
+            </div>
+            {qualityResult && (
+              <div
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  background: 'var(--color-info-bg, rgba(59, 130, 246, 0.08))',
+                  border: '1px solid var(--color-info-border, rgba(59, 130, 246, 0.2))',
+                  marginBottom: '12px',
+                }}
+                role="alert"
+              >
+                <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px' }}>
+                  {t('quality_analysis.result_title')}
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+                    gap: '8px',
+                    marginBottom: '8px',
+                    fontSize: '0.82rem',
+                  }}
+                >
+                  <div>
+                    <strong>{t('quality_analysis.recommended_crf')}:</strong>{' '}
+                    {qualityResult.recommended_crf}
+                  </div>
+                  <div>
+                    <strong>{t('quality_analysis.bpp')}:</strong> {qualityResult.bpp}
+                  </div>
+                  <div>
+                    <strong>{t('quality_analysis.denoise_recommended')}:</strong>{' '}
+                    {qualityResult.recommend_denoise
+                      ? t('quality_analysis.yes')
+                      : t('quality_analysis.no')}
+                  </div>
+                </div>
+                <p style={{ margin: '0 0 8px', fontSize: '0.8rem', lineHeight: 1.4 }}>
+                  {qualityResult.reason}
+                </p>
+                {qualityResult.status === 'success' && (
+                  <button
+                    className="primary-button"
+                    onClick={applyQualitySettings}
+                    style={{ fontSize: '0.8rem', padding: '6px 12px' }}
+                  >
+                    {t('quality_analysis.apply_settings')}
+                  </button>
+                )}
+              </div>
+            )}
             <div className="settings-grid">
               <div className="setting-item">
                 <label htmlFor="crf-slider">

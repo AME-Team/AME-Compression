@@ -3,6 +3,7 @@ from typing import Any
 
 from flask import Blueprint, Response, jsonify, request
 
+from ...analyzer import analyze_quality
 from ...audio import get_audio_info_safe
 from ...ffmpeg import resolve_ffmpeg_paths
 from ...video import get_video_info_safe
@@ -60,5 +61,27 @@ def analyze_volume_endpoint() -> Response | tuple[Response, int]:
             return jsonify(result)
         else:
             return jsonify({"error": "Failed to analyze volume"}), 500
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@media_bp.route("/analyze-settings", methods=["POST"])
+def analyze_settings() -> Response | tuple[Response, int]:
+    """Analyze a media file and return recommended compression settings."""
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    path = data.get("path")
+    if not path:
+        return jsonify({"error": "Path is required"}), 400
+
+    path_obj = Path(path)
+    if not path_obj.exists():
+        return jsonify({"error": "File not found"}), 404
+
+    try:
+        _, ffprobe_path = resolve_ffmpeg_paths()
+        result = analyze_quality(path_obj, ffprobe_path)
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500

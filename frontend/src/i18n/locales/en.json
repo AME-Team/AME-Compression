@@ -266,5 +266,19 @@
     "select": "select",
     "close": "close",
     "no_results": "No results found"
+  },
+  "quality_analysis": {
+    "title": "Quality Analysis",
+    "analyze": "Analyze Optimal Settings",
+    "analyzing": "Analyzing...",
+    "recommended_crf": "Recommended CRF",
+    "bpp": "Bits-Per-Pixel (BPP)",
+    "denoise_recommended": "Denoise Recommended",
+    "yes": "Yes",
+    "no": "No",
+    "apply_settings": "Apply Recommended Settings",
+    "applied": "Recommended settings applied.",
+    "no_file": "Select a video file first",
+    "result_title": "Analysis Result"
   }
 }
