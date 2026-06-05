@@ -62,6 +62,8 @@ const SettingsView: React.FC = () => {
 
   const handleThemeChange = (mode: 'light' | 'dark' | 'system'): void => {
     setSettings({ ...settings, appearance_mode: mode })
+    document.documentElement.setAttribute('data-theme', mode)
+    void window.electronAPI?.setThemeColor(mode)
   }
 
   if (loading) return <div>{t('common.loading')}</div>
