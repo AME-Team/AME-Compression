@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from flask import Blueprint, Response, jsonify, request
 
@@ -93,4 +93,45 @@ def analyze_settings() -> Response | tuple[Response, int]:
         return jsonify(result)
     except Exception as e:
         logger.exception("Quality analysis failed for: %s", path)
+        return jsonify({"error": str(e)}), 500
+
+
+@media_bp.route("/batch-analyze-settings", methods=["POST"])
+def batch_analyze_settings() -> Response | tuple[Response, int]:
+    """Analyze multiple media files and return per-file recommended settings."""
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    raw_paths = data.get("paths")
+    if not raw_paths or not isinstance(raw_paths, list):
+        return jsonify({"error": "paths must be a non-empty list"}), 400
+    paths = [str(p) for p in cast(list[str], raw_paths)]
+
+    logger.info("Batch analyzing %d files", len(paths))
+    try:
+        _, ffprobe_path = resolve_ffmpeg_paths()
+        results: list[dict[str, Any]] = []
+        for file_path in paths:
+            path_obj = Path(file_path)
+            if not path_obj.exists():
+                results.append(
+                    {
+                        "path": file_path,
+                        "status": "error",
+                        "recommended_crf": 25,
+                        "recommend_denoise": False,
+                        "denoise_level": None,
+                        "bpp": 0.0,
+                        "reason": "File not found.",
+                        "metadata": {},
+                    }
+                )
+                continue
+            result = analyze_quality(path_obj, ffprobe_path)
+            result["path"] = file_path
+            results.append(result)
+        logger.info("Batch analysis complete for %d files", len(paths))
+        return jsonify(results)
+    except Exception as e:
+        logger.exception("Batch quality analysis failed")
         return jsonify({"error": str(e)}), 500

@@ -279,6 +279,13 @@
     "apply_settings": "推奨設定を適用",
     "applied": "推奨設定を適用しました。",
     "no_file": "先に動画ファイルを選択してください",
-    "result_title": "解析結果"
+    "result_title": "解析結果",
+    "batch_analyze": "全ファイルを解析",
+    "batch_analyzing": "{{current}}/{{total}} を解析中...",
+    "batch_mode": "ファイルごとに最適化",
+    "batch_mode_description": "各ファイルを個別に解析し、最適な設定をファイルごとに適用します",
+    "batch_complete": "バッチ解析完了: {{count}} 件のファイルを解析しました",
+    "batch_partial": "バッチ解析完了: {{success}} 件成功, {{failed}} 件失敗",
+    "crf_label": "CRF {{value}}"
   }
 }

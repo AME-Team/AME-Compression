@@ -12,7 +12,7 @@ import { Upload, Settings, FileSearch, ChevronDown, X, Sparkles } from 'lucide-r
 import { api } from '../services/api'
 import type { MediaProfile } from '../profiles'
 import { DEFAULT_SETTINGS } from '../profiles'
-import type { QualityAnalysisResult } from '../types'
+import type { QualityAnalysisResult, BatchAnalysisItem } from '../types'
 import SelectDropdown from '../components/SelectDropdown'
 
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'flac', 'm4a'])
@@ -372,6 +372,10 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
 
   const [analyzingQuality, setAnalyzingQuality] = useState(false)
   const [qualityResult, setQualityResult] = useState<QualityAnalysisResult | null>(null)
+  const [batchOptimize, setBatchOptimize] = useState(false)
+  const [batchAnalysisResults, setBatchAnalysisResults] = useState<BatchAnalysisItem[]>([])
+  const [batchAnalyzing, setBatchAnalyzing] = useState(false)
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
 
   const currentSettings: Omit<MediaProfile, 'name'> = useMemo(
     () => ({
@@ -543,15 +547,39 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       : '192k'
     const resolvedAudioBitrate = BITRATE_REGEX.test(audioBitrate) ? audioBitrate + 'k' : '192k'
 
+    const getPerFileCrf = (inputPath: string): number => {
+      if (!batchOptimize) return crf
+      const analysis = batchAnalysisResults.find((r) => r.path === inputPath)
+      if (analysis?.result.status === 'success') {
+        return analysis.result.recommended_crf
+      }
+      return crf
+    }
+
+    const getPerFileDenoise = (inputPath: string): { enabled: boolean; level: number } => {
+      if (!batchOptimize) return { enabled: denoiseEnabled, level: denoiseLevel }
+      const analysis = batchAnalysisResults.find((r) => r.path === inputPath)
+      if (analysis?.result.status === 'success') {
+        return {
+          enabled: analysis.result.recommend_denoise,
+          level: analysis.result.denoise_level ?? denoiseLevel,
+        }
+      }
+      return { enabled: denoiseEnabled, level: denoiseLevel }
+    }
+
     const failed: string[] = []
     try {
       for (const inputPath of inputPaths) {
         const detectedType = detectMediaType(inputPath)
+        const fileCrf = getPerFileCrf(inputPath)
+        const fileDenoise = getPerFileDenoise(inputPath)
+
         if (detectedType === 'video') {
           await api
             .post<{ task_id: string }>('/jobs/video', {
               input_path: inputPath,
-              crf,
+              crf: fileCrf,
               preset,
               audio_bitrate: resolvedVideoAudioBitrate,
               audio_enabled: audioEnabled,
@@ -563,7 +591,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                     ? parseInt(maxFps, 10)
                     : null,
               volume_gain_db: volumeGain,
-              denoise_level: denoiseEnabled ? denoiseLevel : null,
+              denoise_level: fileDenoise.enabled ? fileDenoise.level : null,
             })
             .catch((error) => {
               console.error(`Failed to start compression for ${inputPath}`, error)
@@ -576,7 +604,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               bitrate: resolvedAudioBitrate,
               keep_metadata: keepMetadata,
               volume_gain_db: volumeGain,
-              denoise_level: denoiseEnabled ? denoiseLevel : null,
+              denoise_level: fileDenoise.enabled ? fileDenoise.level : null,
             })
             .catch((error) => {
               console.error(`Failed to start compression for ${inputPath}`, error)
@@ -621,6 +649,44 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     setQualityResult(null)
   }
 
+  const handleBatchAnalyze = async (): Promise<void> => {
+    if (inputPaths.length === 0) return
+    const videoPaths = inputPaths.filter((p) => detectMediaType(p) === 'video')
+    if (videoPaths.length === 0) return
+
+    setBatchAnalyzing(true)
+    setBatchAnalysisResults([])
+    setBatchProgress({ current: 0, total: videoPaths.length })
+    try {
+      const response = await api.post<BatchAnalysisItem[]>('/media/batch-analyze-settings', {
+        paths: videoPaths,
+      })
+      setBatchAnalysisResults(
+        response.data.map((item) => ({
+          path: item.path,
+          result: {
+            status: item.result.status,
+            recommended_crf: item.result.recommended_crf,
+            recommend_denoise: item.result.recommend_denoise,
+            denoise_level: item.result.denoise_level,
+            bpp: item.result.bpp,
+            reason: item.result.reason,
+            metadata: item.result.metadata,
+          },
+        })),
+      )
+      setBatchProgress({ current: videoPaths.length, total: videoPaths.length })
+    } catch (error) {
+      console.error('Batch analysis failed', error)
+    } finally {
+      setBatchAnalyzing(false)
+    }
+  }
+
+  const clearBatchAnalysis = (): void => {
+    setBatchAnalysisResults([])
+  }
+
   useImperativeHandle(ref, () => ({
     startCompression,
     getCurrentSettings: () => currentSettings,
@@ -633,6 +699,16 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   useEffect(() => {
     onStateChange?.({ inputPaths, loading, settings: currentSettings })
   }, [inputPaths, loading, currentSettings, onStateChange])
+
+  useEffect(() => {
+    if (!batchOptimize) {
+      setBatchAnalysisResults([])
+    }
+  }, [batchOptimize])
+
+  useEffect(() => {
+    setBatchAnalysisResults([])
+  }, [inputPaths])
 
   return (
     <div className="view-container">
@@ -688,22 +764,32 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             role="list"
             aria-label={t('file.selected_count', { count: inputPaths.length })}
           >
-            {inputPaths.map((filePath, index) => (
-              <div key={filePath} className="file-list-item" role="listitem">
-                <span className="file-list-path" title={filePath}>
-                  {filePath.split(/[\\/]/).pop()}
-                </span>
-                <button
-                  className="file-remove-button"
-                  onClick={() => {
-                    removeFile(index)
-                  }}
-                  aria-label={`${t('file.remove')}: ${filePath.split(/[\\/]/).pop()}`}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            ))}
+            {inputPaths.map((filePath, index) => {
+              const analysis = batchAnalysisResults.find((r) => r.path === filePath)
+              return (
+                <div key={filePath} className="file-list-item" role="listitem">
+                  <span className="file-list-path" title={filePath}>
+                    {filePath.split(/[\\/]/).pop()}
+                  </span>
+                  {analysis?.result.status === 'success' && (
+                    <span className="file-analysis-badge" title={analysis.result.reason}>
+                      {t('quality_analysis.crf_label', {
+                        value: analysis.result.recommended_crf,
+                      })}
+                    </span>
+                  )}
+                  <button
+                    className="file-remove-button"
+                    onClick={() => {
+                      removeFile(index)
+                    }}
+                    aria-label={`${t('file.remove')}: ${filePath.split(/[\\/]/).pop()}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
         <div className="file-list-actions">
@@ -794,19 +880,96 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         {mediaType === 'video' ? (
           <>
             <div className="section-title">{t('video_settings.video_section')}</div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-              <button
-                className="secondary-button"
-                disabled={analyzingQuality || inputPaths.length === 0}
-                onClick={() => void handleAnalyzeQuality()}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}
-                aria-label={t('quality_analysis.analyze')}
-              >
-                <Sparkles size={14} />
-                {analyzingQuality ? t('quality_analysis.analyzing') : t('quality_analysis.analyze')}
-              </button>
+            <div className="batch-optimize-header">
+              <label className="batch-optimize-toggle">
+                <input
+                  type="checkbox"
+                  checked={batchOptimize}
+                  onChange={(e) => {
+                    setBatchOptimize(e.target.checked)
+                  }}
+                />
+                <span>{t('quality_analysis.batch_mode')}</span>
+              </label>
+              <small className="batch-optimize-hint">
+                {t('quality_analysis.batch_mode_description')}
+              </small>
             </div>
-            {qualityResult && (
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginBottom: '8px',
+                gap: '8px',
+              }}
+            >
+              {batchOptimize ? (
+                <>
+                  <button
+                    className="secondary-button"
+                    disabled={
+                      batchAnalyzing ||
+                      inputPaths.filter((p) => detectMediaType(p) === 'video').length === 0
+                    }
+                    onClick={() => void handleBatchAnalyze()}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.82rem',
+                    }}
+                    aria-label={t('quality_analysis.batch_analyze')}
+                  >
+                    <Sparkles size={14} />
+                    {batchAnalyzing
+                      ? t('quality_analysis.batch_analyzing', {
+                          current: batchProgress.current,
+                          total: batchProgress.total,
+                        })
+                      : t('quality_analysis.batch_analyze')}
+                  </button>
+                  {batchAnalysisResults.length > 0 && (
+                    <button
+                      className="secondary-button"
+                      onClick={clearBatchAnalysis}
+                      style={{ fontSize: '0.82rem' }}
+                    >
+                      {t('file.clear_all')}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  className="secondary-button"
+                  disabled={analyzingQuality || inputPaths.length === 0}
+                  onClick={() => void handleAnalyzeQuality()}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}
+                  aria-label={t('quality_analysis.analyze')}
+                >
+                  <Sparkles size={14} />
+                  {analyzingQuality
+                    ? t('quality_analysis.analyzing')
+                    : t('quality_analysis.analyze')}
+                </button>
+              )}
+            </div>
+            {batchOptimize && batchAnalysisResults.length > 0 && (
+              <div className="batch-analysis-summary" role="status">
+                <span>
+                  {batchAnalysisResults.every((r) => r.result.status === 'success')
+                    ? t('quality_analysis.batch_complete', {
+                        count: batchAnalysisResults.length,
+                      })
+                    : t('quality_analysis.batch_partial', {
+                        success: batchAnalysisResults.filter((r) => r.result.status === 'success')
+                          .length,
+                        failed: batchAnalysisResults.filter((r) => r.result.status === 'error')
+                          .length,
+                      })}
+                </span>
+              </div>
+            )}
+            {!batchOptimize && qualityResult && (
               <div
                 style={{
                   padding: '12px 16px',

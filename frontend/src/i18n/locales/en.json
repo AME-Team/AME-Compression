@@ -279,6 +279,13 @@
     "apply_settings": "Apply Recommended Settings",
     "applied": "Recommended settings applied.",
     "no_file": "Select a video file first",
-    "result_title": "Analysis Result"
+    "result_title": "Analysis Result",
+    "batch_analyze": "Analyze All Files",
+    "batch_analyzing": "Analyzing {{current}}/{{total}}...",
+    "batch_mode": "Optimize Each File",
+    "batch_mode_description": "Analyze each file individually and apply optimal settings per file",
+    "batch_complete": "Batch analysis complete: {{count}} file(s) analyzed",
+    "batch_partial": "Batch analysis complete: {{success}} succeeded, {{failed}} failed",
+    "crf_label": "CRF {{value}}"
   }
 }

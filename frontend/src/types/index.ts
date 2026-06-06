@@ -50,6 +50,7 @@ export interface QualityAnalysisResult {
   denoise_level: number | null
   bpp: number
   reason: string
+  path?: string
   metadata: {
     width?: number | null
     height?: number | null
@@ -58,4 +59,9 @@ export interface QualityAnalysisResult {
     bit_rate?: number | null
     codec_name?: string
   }
+}
+
+export interface BatchAnalysisItem {
+  path: string
+  result: QualityAnalysisResult
 }
