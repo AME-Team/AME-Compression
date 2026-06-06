@@ -378,8 +378,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
 
   const isAnalysisActive = analysisMode !== 'none'
-  const disableVideoSettings =
-    isAnalysisActive && (analysisMode === 'all' || analysisMode === 'video')
+  const disableCrf = isAnalysisActive && (analysisMode === 'all' || analysisMode === 'video')
   const disableAudioSettings =
     isAnalysisActive && (analysisMode === 'all' || analysisMode === 'audio')
 
@@ -724,7 +723,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   }, [analysisMode])
 
   useEffect(() => {
-    setBatchAnalysisResults([])
+    setBatchAnalysisResults((prev) => prev.filter((r) => inputPaths.includes(r.path)))
   }, [inputPaths])
 
   return (
@@ -1071,7 +1070,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   min="0"
                   max="63"
                   value={crf}
-                  disabled={disableVideoSettings}
+                  disabled={disableCrf}
                   onChange={(e) => {
                     setCrf(parseInt(e.target.value))
                   }}
@@ -1089,7 +1088,6 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   min="0"
                   max="13"
                   value={preset}
-                  disabled={disableVideoSettings}
                   onChange={(e) => {
                     setPreset(parseInt(e.target.value))
                   }}
@@ -1105,7 +1103,6 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   onChange={(val) => {
                     setMaxResolution(val)
                   }}
-                  disabled={disableVideoSettings}
                   ariaLabel={t('video_settings.max_resolution')}
                   options={[
                     { value: 'original', label: t('video_settings.resolution.original') },
@@ -1146,7 +1143,6 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   onChange={(val) => {
                     setMaxFps(val || 'unlimited')
                   }}
-                  disabled={disableVideoSettings}
                   sanitize={(val) => val.replace(/[^\d]/g, '')}
                   validate={(val) => val === '' || /^\d+$/.test(val)}
                   fallbackValue=""
