@@ -1253,7 +1253,7 @@ label.disabled-label,
   gap: 8px;
   margin: 4px 0;
   border-radius: 0 8px 8px 0;
-  transition: all 0.15s ease;
+  transition: box-shadow 0.15s ease;
 }
 
 [data-theme='dark'] .profile-item {
@@ -1264,10 +1264,6 @@ label.disabled-label,
 [data-theme='light'] .profile-item {
   background: linear-gradient(135deg, rgba(124, 58, 237, 0.06), rgba(139, 92, 246, 0.03));
   border-left: 3px solid rgba(124, 58, 237, 0.3);
-}
-
-.profile-item:hover {
-  transform: translateX(4px);
 }
 
 [data-theme='dark'] .profile-item:hover {
