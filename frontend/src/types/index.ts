@@ -42,3 +42,20 @@ export interface AppSettings {
   ffmpeg_path: string
   default_output_dir: string
 }
+
+export interface QualityAnalysisResult {
+  status: 'success' | 'error'
+  recommended_crf: number
+  recommend_denoise: boolean
+  denoise_level: number | null
+  bpp: number
+  reason: string
+  metadata: {
+    width?: number | null
+    height?: number | null
+    fps?: number | null
+    duration?: number | null
+    bit_rate?: number | null
+    codec_name?: string
+  }
+}

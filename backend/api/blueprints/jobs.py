@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -7,6 +8,8 @@ from ...audio import compress_audio_service
 from ...ffmpeg import resolve_ffmpeg_paths
 from ...video import compress_video_service
 from ..job_runner import job_runner
+
+logger = logging.getLogger(__name__)
 
 jobs_bp = Blueprint("jobs", __name__)
 
@@ -52,6 +55,7 @@ def start_video_compression() -> tuple[Response, int]:
         ffprobe_path=ffprobe_path,
     )
 
+    logger.info("Video compression job started: %s -> %s", task_id[:8], input_path)
     return jsonify({"task_id": task_id}), 202
 
 
@@ -81,6 +85,7 @@ def start_audio_compression() -> tuple[Response, int]:
         ffprobe_path=ffprobe_path,
     )
 
+    logger.info("Audio compression job started: %s -> %s", task_id[:8], input_path)
     return jsonify({"task_id": task_id}), 202
 
 
@@ -117,6 +122,7 @@ def get_job_status(task_id: str) -> tuple[Response, int]:
 @jobs_bp.route("/<task_id>", methods=["DELETE"])
 def cancel_job(task_id: str) -> tuple[Response, int]:
     """Cancel a specific compression task."""
+    logger.info("Cancel requested for job: %s", task_id[:8])
     success = job_runner.cancel_task(task_id)
     if not success:
         return jsonify({"error": "Job not found"}), 404

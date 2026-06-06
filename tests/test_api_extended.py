@@ -94,7 +94,7 @@ def test_media_info_audio(client: FlaskClient) -> None:
             return_value={"bitrate": "128k"},
         ),
     ):
-        response = client.get("/api/media-info?path=test.mp3")
+        response = client.get("/api/media/info?path=test.mp3")
         assert response.status_code == 200
         assert response.get_json()["type"] == "audio"
         assert response.get_json()["bitrate"] == "128k"
@@ -102,7 +102,7 @@ def test_media_info_audio(client: FlaskClient) -> None:
 
 def test_media_info_not_found(client: FlaskClient) -> None:
     with patch("backend.api.blueprints.media.Path.exists", return_value=False):
-        response = client.get("/api/media-info?path=non-existent.mp4")
+        response = client.get("/api/media/info?path=non-existent.mp4")
         assert response.status_code == 404
 
 
@@ -114,7 +114,7 @@ def test_analyze_volume_endpoint(client: FlaskClient) -> None:
             return_value={"mean_volume": -15.0, "max_volume": -1.0},
         ),
     ):
-        response = client.post("/api/volume/analyze", json={"path": "test.mp4"})
+        response = client.post("/api/media/volume-analyze", json={"path": "test.mp4"})
         assert response.status_code == 200
         assert response.get_json()["mean_volume"] == -15.0
 
@@ -127,6 +127,6 @@ def test_analyze_volume_error(client: FlaskClient) -> None:
             return_value={"mean_volume": None},
         ),
     ):
-        response = client.post("/api/volume/analyze", json={"path": "test.mp4"})
+        response = client.post("/api/media/volume-analyze", json={"path": "test.mp4"})
         assert response.status_code == 500
         assert "error" in response.get_json()

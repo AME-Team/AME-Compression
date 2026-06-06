@@ -266,5 +266,19 @@
     "select": "実行",
     "close": "閉じる",
     "no_results": "結果が見つかりません"
+  },
+  "quality_analysis": {
+    "title": "品質解析",
+    "analyze": "最適設定を解析",
+    "analyzing": "解析中...",
+    "recommended_crf": "推奨CRF",
+    "bpp": "BPP（ピクセルあたりビット数）",
+    "denoise_recommended": "ノイズ除去の推奨",
+    "yes": "はい",
+    "no": "いいえ",
+    "apply_settings": "推奨設定を適用",
+    "applied": "推奨設定を適用しました。",
+    "no_file": "先に動画ファイルを選択してください",
+    "result_title": "解析結果"
   }
 }
