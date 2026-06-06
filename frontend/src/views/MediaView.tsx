@@ -658,21 +658,13 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     setBatchAnalysisResults([])
     setBatchProgress({ current: 0, total: videoPaths.length })
     try {
-      const response = await api.post<BatchAnalysisItem[]>('/media/batch-analyze-settings', {
+      const response = await api.post<QualityAnalysisResult[]>('/media/batch-analyze-settings', {
         paths: videoPaths,
       })
       setBatchAnalysisResults(
         response.data.map((item) => ({
-          path: item.path,
-          result: {
-            status: item.result.status,
-            recommended_crf: item.result.recommended_crf,
-            recommend_denoise: item.result.recommend_denoise,
-            denoise_level: item.result.denoise_level,
-            bpp: item.result.bpp,
-            reason: item.result.reason,
-            metadata: item.result.metadata,
-          },
+          path: item.path ?? '',
+          result: item,
         })),
       )
       setBatchProgress({ current: videoPaths.length, total: videoPaths.length })
@@ -908,8 +900,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   <button
                     className="secondary-button"
                     disabled={
-                      batchAnalyzing ||
-                      inputPaths.filter((p) => detectMediaType(p) === 'video').length === 0
+                      batchAnalyzing || !inputPaths.some((p) => detectMediaType(p) === 'video')
                     }
                     onClick={() => void handleBatchAnalyze()}
                     style={{

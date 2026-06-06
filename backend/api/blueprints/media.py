@@ -110,28 +110,44 @@ def batch_analyze_settings() -> Response | tuple[Response, int]:
     logger.info("Batch analyzing %d files", len(paths))
     try:
         _, ffprobe_path = resolve_ffmpeg_paths()
-        results: list[dict[str, Any]] = []
-        for file_path in paths:
-            path_obj = Path(file_path)
-            if not path_obj.exists():
-                results.append(
-                    {
-                        "path": file_path,
-                        "status": "error",
-                        "recommended_crf": 25,
-                        "recommend_denoise": False,
-                        "denoise_level": None,
-                        "bpp": 0.0,
-                        "reason": "File not found.",
-                        "metadata": {},
-                    }
-                )
-                continue
+    except Exception as e:
+        logger.exception("Failed to resolve FFmpeg paths")
+        return jsonify({"error": str(e)}), 500
+
+    results: list[dict[str, Any]] = []
+    for file_path in paths:
+        path_obj = Path(file_path)
+        if not path_obj.exists():
+            results.append(
+                {
+                    "path": file_path,
+                    "status": "error",
+                    "recommended_crf": 25,
+                    "recommend_denoise": False,
+                    "denoise_level": None,
+                    "bpp": 0.0,
+                    "reason": "File not found.",
+                    "metadata": {},
+                }
+            )
+            continue
+        try:
             result = analyze_quality(path_obj, ffprobe_path)
             result["path"] = file_path
             results.append(result)
-        logger.info("Batch analysis complete for %d files", len(paths))
-        return jsonify(results)
-    except Exception as e:
-        logger.exception("Batch quality analysis failed")
-        return jsonify({"error": str(e)}), 500
+        except Exception as e:
+            logger.exception("Quality analysis failed for: %s", file_path)
+            results.append(
+                {
+                    "path": file_path,
+                    "status": "error",
+                    "recommended_crf": 25,
+                    "recommend_denoise": False,
+                    "denoise_level": None,
+                    "bpp": 0.0,
+                    "reason": f"Analysis failed: {e}",
+                    "metadata": {},
+                }
+            )
+    logger.info("Batch analysis complete for %d files", len(paths))
+    return jsonify(results)
