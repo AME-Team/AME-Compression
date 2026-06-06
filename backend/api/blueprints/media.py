@@ -4,7 +4,7 @@ from typing import Any, cast
 
 from flask import Blueprint, Response, jsonify, request
 
-from ...analyzer import analyze_quality
+from ...analyzer import analyze_audio_quality, analyze_quality, detect_media_type
 from ...audio import get_audio_info_safe
 from ...ffmpeg import resolve_ffmpeg_paths
 from ...video import get_video_info_safe
@@ -106,8 +106,11 @@ def batch_analyze_settings() -> Response | tuple[Response, int]:
     if not raw_paths or not isinstance(raw_paths, list):
         return jsonify({"error": "paths must be a non-empty list"}), 400
     paths = [str(p) for p in cast(list[str], raw_paths)]
+    mode = data.get("mode", "all")
+    if mode not in ("all", "video", "audio"):
+        return jsonify({"error": "mode must be one of: all, video, audio"}), 400
 
-    logger.info("Batch analyzing %d files", len(paths))
+    logger.info("Batch analyzing %d files (mode=%s)", len(paths), mode)
     try:
         _, ffprobe_path = resolve_ffmpeg_paths()
     except Exception as e:
@@ -121,30 +124,78 @@ def batch_analyze_settings() -> Response | tuple[Response, int]:
             results.append(
                 {
                     "path": file_path,
+                    "media_type": "unknown",
                     "status": "error",
                     "recommended_crf": 25,
                     "recommend_denoise": False,
                     "denoise_level": None,
                     "bpp": 0.0,
+                    "recommended_bitrate": 192,
                     "reason": "File not found.",
                     "metadata": {},
                 }
             )
             continue
+
+        file_media_type = detect_media_type(path_obj)
+        should_analyze = (
+            mode == "all"
+            or (mode == "video" and file_media_type == "video")
+            or (mode == "audio" and file_media_type == "audio")
+        )
+
+        if not should_analyze:
+            results.append(
+                {
+                    "path": file_path,
+                    "media_type": file_media_type,
+                    "status": "skipped",
+                    "recommended_crf": 25,
+                    "recommend_denoise": False,
+                    "denoise_level": None,
+                    "bpp": 0.0,
+                    "recommended_bitrate": 192,
+                    "reason": f"Skipped: mode is '{mode}' but file is {file_media_type}.",
+                    "metadata": {},
+                }
+            )
+            continue
+
         try:
-            result = analyze_quality(path_obj, ffprobe_path)
-            result["path"] = file_path
-            results.append(result)
+            if file_media_type == "audio":
+                audio_result = analyze_audio_quality(path_obj, ffprobe_path)
+                results.append(
+                    {
+                        "path": file_path,
+                        "media_type": "audio",
+                        "status": audio_result["status"],
+                        "recommended_crf": 25,
+                        "recommend_denoise": False,
+                        "denoise_level": None,
+                        "bpp": 0.0,
+                        "recommended_bitrate": audio_result["recommended_bitrate"],
+                        "reason": audio_result["reason"],
+                        "metadata": audio_result["metadata"],
+                    }
+                )
+            else:
+                result = analyze_quality(path_obj, ffprobe_path)
+                result["path"] = file_path
+                result["media_type"] = "video"
+                result["recommended_bitrate"] = 192
+                results.append(result)
         except Exception as e:
             logger.exception("Quality analysis failed for: %s", file_path)
             results.append(
                 {
                     "path": file_path,
+                    "media_type": file_media_type,
                     "status": "error",
                     "recommended_crf": 25,
                     "recommend_denoise": False,
                     "denoise_level": None,
                     "bpp": 0.0,
+                    "recommended_bitrate": 192,
                     "reason": f"Analysis failed: {e}",
                     "metadata": {},
                 }

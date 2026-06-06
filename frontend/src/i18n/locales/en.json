@@ -286,6 +286,16 @@
     "batch_mode_description": "Analyze each file individually and apply optimal settings per file",
     "batch_complete": "Batch analysis complete: {{count}} file(s) analyzed",
     "batch_partial": "Batch analysis complete: {{success}} succeeded, {{failed}} failed",
-    "crf_label": "CRF {{value}}"
+    "crf_label": "CRF {{value}}",
+    "mode_label": "Analysis Mode",
+    "mode_none": "Disabled",
+    "mode_all": "All Auto Analysis",
+    "mode_all_description": "Analyze all files (video and audio). Auto-configures per-file settings.",
+    "mode_video": "Video Analysis",
+    "mode_video_description": "Analyze video files only. Auto-configures CRF and denoise per file.",
+    "mode_audio": "Audio Analysis",
+    "mode_audio_description": "Analyze audio files only. Auto-configures bitrate per file.",
+    "bitrate_label": "{{value}} kbps",
+    "recommended_bitrate": "Recommended Bitrate"
   }
 }

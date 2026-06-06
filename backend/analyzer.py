@@ -1,17 +1,19 @@
-"""Quality analysis and optimal settings suggestion for video files.
+"""Quality analysis and optimal settings suggestion for media files.
 
 This module analyzes media files using ffprobe metadata and provides
-recommended compression settings (CRF, denoise, etc.) based on the
-computed Bits-Per-Pixel (BPP) metric.
+recommended compression settings based on the computed metrics.
+
+For **video files** the analysis computes Bits-Per-Pixel (BPP) and maps it
+to a recommended CRF value.  For **audio files** the analysis inspects the
+source bitrate and recommends an appropriate MP3 output bitrate.
 
 The analysis follows a two-tier strategy:
 
-1. **Fast tier** - BPP calculation from metadata (instant).
+1. **Fast tier** - Metadata calculation from ffprobe (instant).
 2. **Extended tier** - Short sample encoding with SSIM quality measurement
    (future upgrade path).
 
-The fast tier is used by default.  It computes BPP from the video's bitrate,
-resolution, and frame-rate, then maps the result to a recommended CRF value.
+The fast tier is used by default.
 """
 
 import contextlib
@@ -20,10 +22,12 @@ from pathlib import Path
 from typing import Any
 
 from .config import (
+    AUDIO_EXTENSIONS,
     CRF_MAX,
     CRF_MIN,
     DEFAULT_CRF,
     DEFAULT_DENOISE_LEVEL,
+    VIDEO_EXTENSIONS,
 )
 from .ffmpeg import get_detailed_media_info
 
@@ -304,3 +308,169 @@ def analyze_quality(media_path: str | Path, ffprobe_path: str = "ffprobe") -> di
         "reason": reason,
         "metadata": meta,
     }
+
+
+def _source_bitrate_to_recommended_mp3(source_bitrate_kbps: int) -> int:
+    """Map a source audio bitrate to a recommended MP3 output bitrate.
+
+    The recommendation never exceeds the source bitrate for lossy codecs,
+    and caps at 320 kbps for lossless sources.
+
+    Args:
+        source_bitrate_kbps: Source audio bitrate in kbps.
+
+    Returns:
+        Recommended MP3 output bitrate in kbps.
+    """
+    mp3_bitrates = [64, 96, 128, 160, 192, 256, 320]
+    for br in mp3_bitrates:
+        if source_bitrate_kbps <= br:
+            return br
+    return 320
+
+
+def _extract_audio_metadata(
+    audio_stream: dict[str, Any], fmt_info: dict[str, Any], media_path: Path
+) -> dict[str, Any]:
+    """Extract metadata from an audio stream and format info."""
+    codec_name = audio_stream.get("codec_name", "")
+    sample_rate = None
+    channels = None
+    with contextlib.suppress(ValueError, TypeError):
+        sr_val = audio_stream.get("sample_rate")
+        if sr_val is not None:
+            sample_rate = int(sr_val)
+    with contextlib.suppress(ValueError, TypeError):
+        ch_val = audio_stream.get("channels")
+        if ch_val is not None:
+            channels = int(ch_val)
+
+    duration = None
+    duration_str = fmt_info.get("duration")
+    if duration_str is not None:
+        with contextlib.suppress(ValueError):
+            duration = float(duration_str)
+
+    bit_rate = None
+    br_str = audio_stream.get("bit_rate")
+    if br_str is not None:
+        with contextlib.suppress(ValueError, TypeError):
+            bit_rate = int(br_str)
+    if bit_rate is None:
+        br_str = fmt_info.get("bit_rate")
+        if br_str is not None:
+            with contextlib.suppress(ValueError, TypeError):
+                bit_rate = int(br_str)
+    if bit_rate is None and duration and duration > 0:
+        with contextlib.suppress(OSError):
+            file_size = media_path.stat().st_size
+            bit_rate = int((file_size * 8) / duration)
+
+    return {
+        "codec_name": codec_name,
+        "sample_rate": sample_rate,
+        "channels": channels,
+        "duration": duration,
+        "bit_rate": bit_rate,
+    }
+
+
+def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe") -> dict[str, Any]:
+    """Analyze an audio file and recommend an optimal output bitrate.
+
+    Args:
+        media_path: Path to the audio file.
+        ffprobe_path: Path to the ffprobe executable.
+
+    Returns:
+        A dict with the following keys:
+
+        - ``status``: ``"success"`` or ``"error"``
+        - ``recommended_bitrate``: Suggested MP3 bitrate in kbps (int)
+        - ``source_bitrate_kbps``: Source audio bitrate in kbps (int or None)
+        - ``reason``: Human-readable explanation (str)
+        - ``metadata``: Extracted audio metadata (dict)
+    """
+    media_path = Path(media_path)
+    if not media_path.exists():
+        return {
+            "status": "error",
+            "recommended_bitrate": 192,
+            "source_bitrate_kbps": None,
+            "reason": "File not found.",
+            "metadata": {},
+        }
+
+    detailed = get_detailed_media_info(media_path, ffprobe_path)
+    if not detailed:
+        return {
+            "status": "error",
+            "recommended_bitrate": 192,
+            "source_bitrate_kbps": None,
+            "reason": "Could not extract audio metadata.",
+            "metadata": {},
+        }
+
+    streams = detailed.get("streams", [])
+    audio_stream = next((s for s in streams if s.get("codec_type") == "audio"), None)
+    if not audio_stream:
+        return {
+            "status": "error",
+            "recommended_bitrate": 192,
+            "source_bitrate_kbps": None,
+            "reason": "No audio stream found.",
+            "metadata": {},
+        }
+
+    meta = _extract_audio_metadata(audio_stream, detailed.get("format", {}), media_path)
+    bit_rate = meta.get("bit_rate")
+
+    if bit_rate is None or bit_rate <= 0:
+        return {
+            "status": "success",
+            "recommended_bitrate": 192,
+            "source_bitrate_kbps": None,
+            "reason": "Bitrate information unavailable; using default 192 kbps.",
+            "metadata": meta,
+        }
+
+    source_kbps = bit_rate // 1000
+    recommended = _source_bitrate_to_recommended_mp3(source_kbps)
+
+    if recommended >= source_kbps:
+        reason = (
+            f"The source audio ({meta['codec_name']}, {source_kbps} kbps) has a bitrate "
+            f"of {source_kbps} kbps. A bitrate of {recommended} kbps is recommended "
+            f"to maintain quality."
+        )
+    else:
+        reason = (
+            f"The source audio ({meta['codec_name']}, {source_kbps} kbps) has a high bitrate. "
+            f"An output bitrate of {recommended} kbps provides excellent quality "
+            f"with good compression."
+        )
+
+    return {
+        "status": "success",
+        "recommended_bitrate": recommended,
+        "source_bitrate_kbps": source_kbps,
+        "reason": reason,
+        "metadata": meta,
+    }
+
+
+def detect_media_type(file_path: str | Path) -> str:
+    """Detect whether a file is video or audio based on its extension.
+
+    Args:
+        file_path: Path to the file.
+
+    Returns:
+        ``"video"`` or ``"audio"``.
+    """
+    ext = Path(file_path).suffix.lower()
+    if ext in AUDIO_EXTENSIONS:
+        return "audio"
+    if ext in VIDEO_EXTENSIONS:
+        return "video"
+    return "video"

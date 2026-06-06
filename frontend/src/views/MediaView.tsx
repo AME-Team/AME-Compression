@@ -12,7 +12,7 @@ import { Upload, Settings, FileSearch, ChevronDown, X, Sparkles } from 'lucide-r
 import { api } from '../services/api'
 import type { MediaProfile } from '../profiles'
 import { DEFAULT_SETTINGS } from '../profiles'
-import type { QualityAnalysisResult, BatchAnalysisItem } from '../types'
+import type { QualityAnalysisResult, BatchAnalysisItem, AnalysisMode } from '../types'
 import SelectDropdown from '../components/SelectDropdown'
 
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'flac', 'm4a'])
@@ -372,10 +372,16 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
 
   const [analyzingQuality, setAnalyzingQuality] = useState(false)
   const [qualityResult, setQualityResult] = useState<QualityAnalysisResult | null>(null)
-  const [batchOptimize, setBatchOptimize] = useState(false)
+  const [analysisMode, setAnalysisMode] = useState<AnalysisMode>('none')
   const [batchAnalysisResults, setBatchAnalysisResults] = useState<BatchAnalysisItem[]>([])
   const [batchAnalyzing, setBatchAnalyzing] = useState(false)
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
+
+  const isAnalysisActive = analysisMode !== 'none'
+  const disableVideoSettings =
+    isAnalysisActive && (analysisMode === 'all' || analysisMode === 'video')
+  const disableAudioSettings =
+    isAnalysisActive && (analysisMode === 'all' || analysisMode === 'audio')
 
   const currentSettings: Omit<MediaProfile, 'name'> = useMemo(
     () => ({
@@ -548,24 +554,34 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     const resolvedAudioBitrate = BITRATE_REGEX.test(audioBitrate) ? audioBitrate + 'k' : '192k'
 
     const getPerFileCrf = (inputPath: string): number => {
-      if (!batchOptimize) return crf
+      if (!isAnalysisActive) return crf
       const analysis = batchAnalysisResults.find((r) => r.path === inputPath)
-      if (analysis?.result.status === 'success') {
+      if (analysis?.result.status === 'success' && analysis.result.media_type === 'video') {
         return analysis.result.recommended_crf
       }
       return crf
     }
 
     const getPerFileDenoise = (inputPath: string): { enabled: boolean; level: number } => {
-      if (!batchOptimize) return { enabled: denoiseEnabled, level: denoiseLevel }
+      if (!isAnalysisActive) return { enabled: denoiseEnabled, level: denoiseLevel }
       const analysis = batchAnalysisResults.find((r) => r.path === inputPath)
-      if (analysis?.result.status === 'success') {
+      if (analysis?.result.status === 'success' && analysis.result.media_type === 'video') {
         return {
           enabled: analysis.result.recommend_denoise,
           level: analysis.result.denoise_level ?? denoiseLevel,
         }
       }
       return { enabled: denoiseEnabled, level: denoiseLevel }
+    }
+
+    const getPerFileAudioBitrate = (inputPath: string): string => {
+      if (!isAnalysisActive) return resolvedAudioBitrate
+      const analysis = batchAnalysisResults.find((r) => r.path === inputPath)
+      if (analysis?.result.status === 'success' && analysis.result.media_type === 'audio') {
+        const recommended = analysis.result.recommended_bitrate
+        if (recommended) return `${recommended}k`
+      }
+      return resolvedAudioBitrate
     }
 
     const failed: string[] = []
@@ -598,10 +614,11 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               failed.push(inputPath)
             })
         } else {
+          const fileAudioBitrate = getPerFileAudioBitrate(inputPath)
           await api
             .post<{ task_id: string }>('/jobs/audio', {
               input_path: inputPath,
-              bitrate: resolvedAudioBitrate,
+              bitrate: fileAudioBitrate,
               keep_metadata: keepMetadata,
               volume_gain_db: volumeGain,
               denoise_level: fileDenoise.enabled ? fileDenoise.level : null,
@@ -651,15 +668,23 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
 
   const handleBatchAnalyze = async (): Promise<void> => {
     if (inputPaths.length === 0) return
-    const videoPaths = inputPaths.filter((p) => detectMediaType(p) === 'video')
-    if (videoPaths.length === 0) return
+    let targetPaths: string[]
+    if (analysisMode === 'video') {
+      targetPaths = inputPaths.filter((p) => detectMediaType(p) === 'video')
+    } else if (analysisMode === 'audio') {
+      targetPaths = inputPaths.filter((p) => detectMediaType(p) === 'audio')
+    } else {
+      targetPaths = [...inputPaths]
+    }
+    if (targetPaths.length === 0) return
 
     setBatchAnalyzing(true)
     setBatchAnalysisResults([])
-    setBatchProgress({ current: 0, total: videoPaths.length })
+    setBatchProgress({ current: 0, total: targetPaths.length })
     try {
       const response = await api.post<QualityAnalysisResult[]>('/media/batch-analyze-settings', {
-        paths: videoPaths,
+        paths: targetPaths,
+        mode: analysisMode,
       })
       setBatchAnalysisResults(
         response.data.map((item) => ({
@@ -667,7 +692,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
           result: item,
         })),
       )
-      setBatchProgress({ current: videoPaths.length, total: videoPaths.length })
+      setBatchProgress({ current: targetPaths.length, total: targetPaths.length })
     } catch (error) {
       console.error('Batch analysis failed', error)
     } finally {
@@ -693,10 +718,10 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   }, [inputPaths, loading, currentSettings, onStateChange])
 
   useEffect(() => {
-    if (!batchOptimize) {
+    if (analysisMode === 'none') {
       setBatchAnalysisResults([])
     }
-  }, [batchOptimize])
+  }, [analysisMode])
 
   useEffect(() => {
     setBatchAnalysisResults([])
@@ -765,9 +790,13 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   </span>
                   {analysis?.result.status === 'success' && (
                     <span className="file-analysis-badge" title={analysis.result.reason}>
-                      {t('quality_analysis.crf_label', {
-                        value: analysis.result.recommended_crf,
-                      })}
+                      {analysis.result.media_type === 'audio'
+                        ? t('quality_analysis.bitrate_label', {
+                            value: analysis.result.recommended_bitrate,
+                          })
+                        : t('quality_analysis.crf_label', {
+                            value: analysis.result.recommended_crf,
+                          })}
                     </span>
                   )}
                   <button
@@ -873,19 +902,35 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
           <>
             <div className="section-title">{t('video_settings.video_section')}</div>
             <div className="batch-optimize-header">
-              <label className="batch-optimize-toggle">
-                <input
-                  type="checkbox"
-                  checked={batchOptimize}
-                  onChange={(e) => {
-                    setBatchOptimize(e.target.checked)
-                  }}
-                />
-                <span>{t('quality_analysis.batch_mode')}</span>
+              <label htmlFor="analysis-mode" className="batch-optimize-toggle-label">
+                {t('quality_analysis.mode_label')}
               </label>
-              <small className="batch-optimize-hint">
-                {t('quality_analysis.batch_mode_description')}
-              </small>
+              <SelectDropdown
+                id="analysis-mode"
+                value={analysisMode}
+                onChange={(val) => {
+                  const mode = val
+                  if (mode === 'none' || mode === 'all' || mode === 'video' || mode === 'audio') {
+                    setAnalysisMode(mode)
+                  }
+                }}
+                ariaLabel={t('quality_analysis.mode_label')}
+                options={[
+                  { value: 'none', label: t('quality_analysis.mode_none') },
+                  { value: 'all', label: t('quality_analysis.mode_all') },
+                  { value: 'video', label: t('quality_analysis.mode_video') },
+                  { value: 'audio', label: t('quality_analysis.mode_audio') },
+                ]}
+              />
+              {isAnalysisActive && (
+                <small className="batch-optimize-hint">
+                  {analysisMode === 'all'
+                    ? t('quality_analysis.mode_all_description')
+                    : analysisMode === 'video'
+                      ? t('quality_analysis.mode_video_description')
+                      : t('quality_analysis.mode_audio_description')}
+                </small>
+              )}
             </div>
             <div
               style={{
@@ -895,13 +940,11 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                 gap: '8px',
               }}
             >
-              {batchOptimize ? (
+              {isAnalysisActive ? (
                 <>
                   <button
                     className="secondary-button"
-                    disabled={
-                      batchAnalyzing || !inputPaths.some((p) => detectMediaType(p) === 'video')
-                    }
+                    disabled={batchAnalyzing || inputPaths.length === 0}
                     onClick={() => void handleBatchAnalyze()}
                     style={{
                       display: 'flex',
@@ -944,7 +987,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                 </button>
               )}
             </div>
-            {batchOptimize && batchAnalysisResults.length > 0 && (
+            {isAnalysisActive && batchAnalysisResults.length > 0 && (
               <div className="batch-analysis-summary" role="status">
                 <span>
                   {batchAnalysisResults.every((r) => r.result.status === 'success')
@@ -960,7 +1003,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                 </span>
               </div>
             )}
-            {!batchOptimize && qualityResult && (
+            {!isAnalysisActive && qualityResult && (
               <div
                 style={{
                   padding: '12px 16px',
@@ -1028,6 +1071,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   min="0"
                   max="63"
                   value={crf}
+                  disabled={disableVideoSettings}
                   onChange={(e) => {
                     setCrf(parseInt(e.target.value))
                   }}
@@ -1045,6 +1089,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   min="0"
                   max="13"
                   value={preset}
+                  disabled={disableVideoSettings}
                   onChange={(e) => {
                     setPreset(parseInt(e.target.value))
                   }}
@@ -1060,6 +1105,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   onChange={(val) => {
                     setMaxResolution(val)
                   }}
+                  disabled={disableVideoSettings}
                   ariaLabel={t('video_settings.max_resolution')}
                   options={[
                     { value: 'original', label: t('video_settings.resolution.original') },
@@ -1100,6 +1146,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   onChange={(val) => {
                     setMaxFps(val || 'unlimited')
                   }}
+                  disabled={disableVideoSettings}
                   sanitize={(val) => val.replace(/[^\d]/g, '')}
                   validate={(val) => val === '' || /^\d+$/.test(val)}
                   fallbackValue=""
@@ -1165,6 +1212,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   value={audioBitrate}
                   onChange={setAudioBitrate}
                   placeholder="e.g. 192"
+                  disabled={disableAudioSettings}
                   ariaLabel={t('audio_settings.bitrate')}
                   validate={BITRATE_REGEX.test.bind(BITRATE_REGEX)}
                   fallbackValue="192"

@@ -1208,6 +1208,14 @@ label.disabled-label,
   margin-bottom: 12px;
 }
 
+.batch-optimize-toggle-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
 .batch-optimize-toggle {
   display: flex;
   align-items: center;
