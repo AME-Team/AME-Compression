@@ -16,7 +16,7 @@
 
 ## 2. デザイントークン
 
-デザインルトークンは `frontend/src/index.css` の `@theme {}` ブロックで一元管理する。
+デザイントークンは `frontend/src/index.css` の `@theme {}` ブロックで一元管理する。
 
 ### 2.1 プライマリカラー
 
