@@ -1,107 +1,108 @@
 # AME Compression
 
-A high-performance video and audio compression tool using FFmpeg with SVT-AV1.
-Featuring a modern, intuitive interface powered by Electron, React, and Flask.
+FFmpeg (SVT-AV1) を使用した高性能な動画・音声圧縮ツール。
+Electron、React、および Flask を活用した、モダンで直感的なインターフェースを提供します。
 
-## 🚀 Features
+## 🚀 主な機能
 
-- **Modern Web Interface**: Powered by Electron + React for a sleek, responsive experience.
-- **Video Compression**: Powered by SVT-AV1 for high efficiency and quality.
-- **Audio Compression**: Convert various formats to high-quality MP3 (libmp3lame).
-- **Smart Tools**: Automatic volume adjustment (normalization) and noise reduction.
-- **Batch Processing**: Compress multiple files simultaneously with clear progress tracking.
-- **Multilingual**: Supports both English and Japanese.
+- **モダンな Web インターフェース**: Electron + React により、洗練されたレスポンシブな操作感を実現。
+- **動画圧縮**: SVT-AV1 を採用し、高い圧縮率と画質を両立。
+- **音声圧縮**: 各種フォーマットを高品質な MP3 (libmp3lame) へ変換。
+- **スマートツール**: 自動音量調整（ノーマライズ）およびノイズ除去機能を搭載。
+- **バッチ処理**: 複数ファイルを同時に、進捗を確認しながら一括処理可能。
+- **多言語対応**: 日本語と英語をサポート。
 
-## 📥 Installation
+## 📥 インストール
 
-### 1. Prerequisites (FFmpeg)
+### 1. 前提条件 (FFmpeg)
 
-AmeCompression is distributed in two forms:
+AmeCompression は 2 種類のビルド形態で配布されています。
 
-| Build Type | Description | Platforms |
+| ビルド種別 | 説明 | 対応プラットフォーム |
 |---|---|---|
-| **Bundled** | FFmpeg binaries are included — no separate installation needed. | Windows |
-| **Non-bundled** | FFmpeg must be installed on the system. | Windows / macOS / Linux |
+| **バンドル版** | FFmpeg バイナリ同梱 — 個別のインストール不要。 | Windows |
+| **非バンドル版** | システムに FFmpeg のインストールが必要。 | Windows / macOS / Linux |
 
-For the **non-bundled** build, install FFmpeg on your system:
+**非バンドル版**を使用する場合は、システムに FFmpeg をインストールしてください。
 
-- **Windows**: `choco install ffmpeg` or download from [ffmpeg.org](https://ffmpeg.org/download.html)
+- **Windows**: `choco install ffmpeg` または [ffmpeg.org](https://ffmpeg.org/download.html) からダウンロード
 - **macOS**: `brew install ffmpeg`
 - **Linux**: `sudo apt install ffmpeg libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 libgbm1 libasound2`
 
-Alternatively, you can place `ffmpeg` and `ffprobe` executables in a `bin/` folder inside the project root — they will be detected automatically at runtime.
+または、プロジェクトルートの `bin/` フォルダ内に `ffmpeg` と `ffprobe` の実行ファイルを配置することでも動作します（実行時に自動検出されます）。
 
-### 2. Run from Source
+### 2. ソースから実行
 
-Run the following command in the application root directory:
+アプリケーションのルートディレクトリで以下のコマンドを実行します。
 
-**macOS / Linux:**
+**macOS / Linux の場合:**
+
 ```bash
 make dev
 ```
 
-**Windows:**
+**Windows の場合:**
+
 ```bat
 dev.bat
 ```
 
-## 📄 Documentation
+## 📄 ドキュメント
 
-- [Migration Guide](documents/migration_guide.md) - Details on the architecture and setup.
-- [Development Plan](documents/development_plan.md) - Project roadmap and goals.
+- [移行ガイド](documents/migration_guide.md) - アーキテクチャとセットアップの詳細。
+- [開発計画](documents/development_plan.md) - プロジェクトのロードマップと目標。
 
-## 🖥️ GUI Usage
+## 🖥️ GUI の使い方
 
-1. **Launch**: Start the app via `npm run electron:dev` (dev) or the built executable.
-2. **Add Files**: Drag and drop video/audio files into the application.
-3. **Configure**: Adjust CRF (quality), Preset (speed), or enable Noise Reduction/Volume Gain.
-4. **Process**: Select an output directory and click **Start**.
+1. **起動**: `npm run electron:dev` (開発時) またはビルド済みの実行ファイルを起動します。
+2. **ファイルの追加**: 動画または音声ファイルをウィンドウにドラッグ＆ドロップします。
+3. **設定**: CRF（品質）、プリセット（速度）、ノイズ除去や音量調整を設定します。
+4. **実行**: 出力先フォルダを選択し、**開始** ボタンをクリックします。
 
-## 🛠️ Development & Build
+## 🛠️ 開発とビルド
 
 ```bash
-# Backend
+# バックエンド
 uv sync --extra dev
 
-# Frontend
+# フロントエンド
 cd frontend
 npm install
 npm run build
 
-# Build Standalone (using PyInstaller for backend)
+# スタンドアロンビルド (PyInstaller を使用)
 
-# Non-bundled build (default — uses system FFmpeg at runtime)
+# 非バンドルビルド（デフォルト — 実行時にシステムの FFmpeg を使用）
 uv run scripts/build.py
 
-# Bundled build (includes FFmpeg binaries from bin/)
-# First, place ffmpeg/ffprobe executables in the bin/ directory
+# バンドルビルド（bin/ 内の FFmpeg バイナリを同梱）
+# 事前に bin/ ディレクトリに ffmpeg / ffprobe の実行ファイルを配置してください
 uv run scripts/build.py --with-ffmpeg
 ```
 
-## 🧪 Testing
+## 🧪 テスト
 
 ```bash
-# Run all tests
+# 全テストの実行
 uv run pytest
 
-# Run with coverage report
+# カバレッジレポート付きで実行
 uv run pytest --cov
 
-# Run linter / formatter check
+# リント・フォーマットチェック
 uv run ruff check
 uv run ruff format --check
 
-# Run strict type check (warnings fail)
+# 厳格な型チェック（warningも失敗扱い）
 uv run pyright --warnings
 
-# Frontend strict checks
+# フロントエンドの厳格チェック
 npm --prefix frontend run lint:strict
 npm --prefix frontend run format:check
 ```
 
-## 📄 License
+## 📄 ライセンス
 
-This project is licensed under the MIT License.
+このプロジェクトは MIT ライセンスの下で公開されています。
 
-When using the **bundled** build, please also review `LICENSE_FFMPEG.txt` for
-FFmpeg licensing information (LGPL v2.1+).
+**バンドル版**を使用する場合は、FFmpeg のライセンス情報 (LGPL v2.1+) について `LICENSE_FFMPEG.txt` も併せて確認してください。
