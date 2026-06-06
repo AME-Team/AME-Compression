@@ -279,6 +279,23 @@
     "apply_settings": "推奨設定を適用",
     "applied": "推奨設定を適用しました。",
     "no_file": "先に動画ファイルを選択してください",
-    "result_title": "解析結果"
+    "result_title": "解析結果",
+    "batch_analyze": "全ファイルを解析",
+    "batch_analyzing": "{{current}}/{{total}} を解析中...",
+    "batch_mode": "ファイルごとに最適化",
+    "batch_mode_description": "各ファイルを個別に解析し、最適な設定をファイルごとに適用します",
+    "batch_complete": "バッチ解析完了: {{count}} 件のファイルを解析しました",
+    "batch_partial": "バッチ解析完了: {{success}} 件成功, {{failed}} 件失敗",
+    "crf_label": "CRF {{value}}",
+    "mode_label": "解析モード",
+    "mode_none": "無効",
+    "mode_all": "全て自動解析",
+    "mode_all_description": "全ファイル（動画・音声）を解析し、ファイルごとに最適設定を自動適用します",
+    "mode_video": "動画解析",
+    "mode_video_description": "動画ファイルのみ解析し、CRF・ノイズ除去をファイルごとに自動設定します",
+    "mode_audio": "音声解析",
+    "mode_audio_description": "音声ファイルのみ解析し、ビットレートをファイルごとに自動設定します",
+    "bitrate_label": "{{value}} kbps",
+    "recommended_bitrate": "推奨ビットレート"
   }
 }

@@ -43,13 +43,18 @@ export interface AppSettings {
   default_output_dir: string
 }
 
+export type AnalysisMode = 'none' | 'all' | 'video' | 'audio'
+
 export interface QualityAnalysisResult {
-  status: 'success' | 'error'
+  status: 'success' | 'error' | 'skipped'
   recommended_crf: number
   recommend_denoise: boolean
   denoise_level: number | null
   bpp: number
   reason: string
+  path?: string
+  media_type?: 'video' | 'audio' | 'unknown'
+  recommended_bitrate?: number
   metadata: {
     width?: number | null
     height?: number | null
@@ -57,5 +62,12 @@ export interface QualityAnalysisResult {
     duration?: number | null
     bit_rate?: number | null
     codec_name?: string
+    sample_rate?: number | null
+    channels?: number | null
   }
+}
+
+export interface BatchAnalysisItem {
+  path: string
+  result: QualityAnalysisResult
 }
