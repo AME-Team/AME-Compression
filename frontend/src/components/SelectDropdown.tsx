@@ -75,12 +75,10 @@ const SelectDropdown: React.FC<SelectDropdownProps> = ({
                 onChange(opt.value)
                 setOpen(false)
               }}
-              className="combobox-option"
+              className={`combobox-option${value === opt.value ? ' selected' : ''}`}
               style={{
                 padding: '8px 12px',
                 cursor: 'pointer',
-                background: value === opt.value ? 'var(--color-primary)' : 'transparent',
-                color: value === opt.value ? '#fff' : 'inherit',
                 fontSize: '0.85rem',
               }}
             >
