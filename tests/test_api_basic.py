@@ -24,7 +24,7 @@ def test_api_media_info_endpoint(client: FlaskClient) -> None:
             return_value={"width": 1920, "height": 1080},
         ),
     ):
-        response = client.get("/api/media-info?path=test.mp4")
+        response = client.get("/api/media/info?path=test.mp4")
         assert response.status_code == 200
         assert response.get_json()["width"] == 1920
         assert response.get_json()["type"] == "video"

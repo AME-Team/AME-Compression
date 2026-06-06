@@ -1,3 +1,4 @@
+import logging
 import threading
 import time
 import uuid
@@ -7,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from ..progress_handler import CancellationSource, ProgressEvent
+
+logger = logging.getLogger(__name__)
 
 
 class JobRunner:
@@ -103,6 +106,7 @@ class JobRunner:
                 )
 
             try:
+                logger.info("Task %s (%s) started: %s", task_id[:8], task_type, filename)
                 result = compression_func(
                     on_progress=on_progress, cancellation_source=cancel_source, **kwargs
                 )
@@ -121,7 +125,14 @@ class JobRunner:
                         "finished_at": time.time(),
                     },
                 )
+                logger.info(
+                    "Task %s (%s) finished: status=%s",
+                    task_id[:8],
+                    task_type,
+                    result.status.value,
+                )
             except Exception as e:
+                logger.exception("Task %s (%s) failed: %s", task_id[:8], task_type, e)
                 self._update_task_safe(
                     task_id,
                     {
