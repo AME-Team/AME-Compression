@@ -58,15 +58,15 @@ jobs:
             PR_NUMBER=${{ github.event.issue.number }}
           fi
           echo "Job start time: $START_TIME"
-          
+
           # github-actions[bot]がジョブ開始以降に投稿したコメントをスキャン
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] | 
-            select(.author.login | contains(\"github-actions\")) | 
-            select(.createdAt >= \"$START_TIME\") | 
+            .comments[] |
+            select(.author.login | contains(\"github-actions\")) |
+            select(.createdAt >= \"$START_TIME\") |
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
-          
+
           if [ -n "$errors" ]; then
             echo "::error::PR Review failed: $errors"
             exit 1
@@ -124,14 +124,14 @@ jobs:
             PR_NUMBER=${{ github.event.issue.number }}
           fi
           echo "Job start time: $START_TIME"
-          
+
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] | 
-            select(.author.login | contains(\"github-actions\")) | 
-            select(.createdAt >= \"$START_TIME\") | 
+            .comments[] |
+            select(.author.login | contains(\"github-actions\")) |
+            select(.createdAt >= \"$START_TIME\") |
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
-          
+
           if [ -n "$errors" ]; then
             echo "::error::PR Review failed: $errors"
             exit 1
@@ -190,14 +190,14 @@ jobs:
             PR_NUMBER=${{ github.event.issue.number }}
           fi
           echo "Job start time: $START_TIME"
-          
+
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] | 
-            select(.author.login | contains(\"github-actions\")) | 
-            select(.createdAt >= \"$START_TIME\") | 
+            .comments[] |
+            select(.author.login | contains(\"github-actions\")) |
+            select(.createdAt >= \"$START_TIME\") |
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
-          
+
           if [ -n "$errors" ]; then
             echo "::error::PR Review failed: $errors"
             exit 1
@@ -258,14 +258,14 @@ jobs:
             PR_NUMBER=${{ github.event.issue.number }}
           fi
           echo "Job start time: $START_TIME"
-          
+
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] | 
-            select(.author.login | contains(\"github-actions\")) | 
-            select(.createdAt >= \"$START_TIME\") | 
+            .comments[] |
+            select(.author.login | contains(\"github-actions\")) |
+            select(.createdAt >= \"$START_TIME\") |
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
-          
+
           if [ -n "$errors" ]; then
             echo "::error::PR Review failed: $errors"
             exit 1
