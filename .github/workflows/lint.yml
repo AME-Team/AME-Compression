@@ -1,0 +1,150 @@
+# =============================================================================
+# Lint — unified static analysis (mirrors local pre-commit)
+# =============================================================================
+# This workflow is the CI counterpart of `pre-commit run --all-files`.
+# It exists so that PRs cannot merge unless they pass every check that a
+# contributor would pass locally. There is intentionally NO duplication of
+# the per-tool steps (ruff, eslint, markdownlint, ...): pre-commit owns the
+# orchestration; CI only provides the runtime environments.
+#
+# Triggers:
+#   - push to main (catch regressions on the protected branch)
+#   - pull request to main (gate merges)
+#   - manual dispatch (re-run on demand)
+# =============================================================================
+
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same ref to save CI minutes.
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # pre-commit — runs every hook in `.pre-commit-config.yaml`
+  # ---------------------------------------------------------------------------
+  pre-commit:
+    name: pre-commit run --all-files
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install Python dependencies
+        run: uv sync --extra dev
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install root tooling dependencies
+        run: npm ci
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix frontend
+
+      - name: Cache pre-commit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run pre-commit on all files
+        run: |
+          uv run pre-commit run --all-files --show-diff-on-failure --color=always
+
+  # ---------------------------------------------------------------------------
+  # commitlint — verify every commit in the PR follows Conventional Commits
+  # ---------------------------------------------------------------------------
+  commitlint:
+    name: commitlint (conventional commits)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout (full history for range)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install root tooling dependencies
+        run: npm ci
+
+      - name: Lint commit messages
+        run: |
+          RANGE="${{ github.event.before }}..${{ github.event.after }}"
+          if [ "$RANGE" = "0000000000000000000000000000000000000000..0000000000000000000000000000000000000000" ] || \
+             [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # First commit on a branch: lint against the default branch's tip.
+            BASE="origin/${{ github.base_ref || 'main' }}"
+            echo "Linting commits since $BASE"
+            npx commitlint --from="$BASE" --to=HEAD --verbose
+          else
+            echo "Linting commits in range $RANGE"
+            npx commitlint --from="${{ github.event.before }}" --to="${{ github.event.after }}" --verbose
+          fi
+
+  # ---------------------------------------------------------------------------
+  # supply-chain — npm audit (no GitHub Advanced Security dependency)
+  # ---------------------------------------------------------------------------
+  # Replaces `dependency-review-action`, which requires the GitHub
+  # "Dependency graph" feature (a repo setting that is disabled on private
+  # repos by default). `npm audit` performs the equivalent scan against the
+  # npm registry advisory database and works on any repo.
+  #
+  # We audit PRODUCTION dependencies only (`--omit=dev`) at `high` severity,
+  # because dev-only tooling vulnerabilities do not ship to users and would
+  # otherwise create un-actionable noise from upstream packages outside our
+  # control. Python supply-chain is covered by `pip-audit` in `tests.yml`.
+  supply-chain:
+    name: npm audit (supply chain)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Audit frontend production dependencies
+        run: npm audit --omit=dev --audit-level=high --prefix frontend

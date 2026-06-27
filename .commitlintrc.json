@@ -1,0 +1,35 @@
+{
+  "$schema": "https://github.com/conventional-changelog/commitlint/blob/master/doc/schema.json",
+  "comment": [
+    "Conventional Commits enforcement. Allows Japanese subject lines (the",
+    "project's primary language) while keeping the structured",
+    "`type(scope): subject` format. The body/footer rules are relaxed to",
+    "support multi-line Japanese descriptions."
+  ],
+  "extends": ["@commitlint/config-conventional"],
+  "rules": {
+    "type-enum": [
+      2,
+      "always",
+      ["build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test"]
+    ],
+    "type-case": [2, "always", "lower-case"],
+    "type-empty": [2, "never"],
+    "subject-empty": [2, "never"],
+    "subject-case": [0],
+    "subject-full-stop": [0],
+    "subject-max-length": [2, "always", 120],
+    "header-max-length": [2, "always", 200],
+    "body-leading-blank": [1, "always"],
+    "body-max-line-length": [0],
+    "footer-leading-blank": [1, "always"],
+    "footer-max-line-length": [0]
+  },
+  "prompt": {
+    "settings": {
+      "scope": {
+        "description": "Optional scope, e.g. backend, frontend, ci, docs, api"
+      }
+    }
+  }
+}

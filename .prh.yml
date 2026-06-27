@@ -1,0 +1,136 @@
+# =============================================================================
+# prh — project glossary / preferred expression dictionary
+# =============================================================================
+# Forces consistent spelling of product names, technical terms, and brand
+# spellings across all Japanese documentation. Each entry maps an error
+# pattern to its canonical form, with an optional spec message.
+# Add new entries whenever a recurring misspelling is found.
+# Reference: https://github.com/prh/prh
+# =============================================================================
+
+version: 1
+rules:
+  # ---------------------------------------------------------------------------
+  # Product / brand names — always use the official spelling
+  # ---------------------------------------------------------------------------
+  - expected: AmeCompression
+    patterns:
+      - AME Compression
+      - AMECompression
+      - あめCompression
+      - 雨Compression
+    spec: "The product name is 'AmeCompression' (single word, camelCase)."
+
+  - expected: FFmpeg
+    patterns:
+      - ffmpeg
+      - FFMpeg
+      - FFMPEG
+    spec: "Official spelling: 'FFmpeg' (and 'ffprobe' lowercase for the tool name)."
+
+  - expected: FFprobe
+    patterns:
+      - ffprobe
+      - FFProbe
+
+  - expected: Electron
+    patterns:
+      - electron
+      - ELECTRON
+
+  - expected: TypeScript
+    patterns:
+      - Typescript
+      - typescript
+      - typeScript
+
+  - expected: JavaScript
+    patterns:
+      - Javascript
+      - javascript
+      - javaScript
+
+  - expected: Python
+    patterns:
+      - python
+      - PYTHON
+
+  - expected: React
+    patterns:
+      - react
+      - REACT
+
+  - expected: GitHub
+    patterns:
+      - Github
+      - github
+      - GITHUB
+
+  - expected: Windows
+    patterns:
+      - windows
+      - WINDOWS
+
+  - expected: macOS
+    patterns:
+      - MacOS
+      - Mac OS
+      - macos
+      - OSX
+      - Mac OSX
+      - OS X
+
+  - expected: Linux
+    patterns:
+      - linux
+      - LINUX
+
+  - expected: API
+    pattern: /\bApi\b|\bapi\b/
+    spec: "Always uppercase when referring to an Application Programming Interface."
+
+  - expected: CLI
+    pattern: /\bCli\b|\bcli\b/
+
+  - expected: SVT-AV1
+    patterns:
+      - SVTAV1
+      - SVT AV1
+    spec: "Canonical codec name is 'SVT-AV1' (hyphenated, all-caps)."
+
+  - expected: libsvtav1
+    patterns:
+      - libSVTAV1
+
+  - expected: libmp3lame
+    patterns:
+      - libMP3Lame
+      - Libmp3lame
+
+  # ---------------------------------------------------------------------------
+  # Common Japanese technical-writing preferences
+  # ---------------------------------------------------------------------------
+  - expected: ください
+    patterns:
+      - 下さい
+    spec: "Use hiragana for auxiliary verbs (JTF 4.3.3)."
+
+  - expected: ただし、
+    patterns:
+      - 但し、
+      - 但し
+
+  - expected: なお、
+    patterns:
+      - 尚、
+      - 尚
+
+  - expected: また、
+    patterns:
+      - 又、
+      - 又
+
+  - expected: および
+    patterns:
+      - 及び
+    spec: "Use hiragana for conjunctions (JTF 4.3.3)."

@@ -1,3 +1,11 @@
+# =============================================================================
+# Tests — pytest + dependency audits
+# =============================================================================
+# Static analysis lives in `lint.yml` (single source of truth: pre-commit).
+# This workflow focuses on test execution and supply-chain checks that are
+# too slow or too runtime-specific to belong in pre-commit.
+# =============================================================================
+
 name: Tests
 
 on:
@@ -5,16 +13,35 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  test:
-    runs-on: windows-latest
+  # ---------------------------------------------------------------------------
+  # pytest — backend unit/integration tests on every supported platform
+  # ---------------------------------------------------------------------------
+  pytest:
+    name: pytest (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
       - name: Set up Python
         run: uv python install 3.12
@@ -22,39 +49,43 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Check for error suppression comments
-        run: python scripts/check_suppression_comments.py
-
-      - name: Run linting
-        run: uv run ruff check backend tests
-
-      - name: Run formatting check
-        run: uv run ruff format --check backend tests
-
-      - name: Run type checking
-        run: uv run pyright --warnings
-
-      - name: Run mypy type checking
-        run: uv run mypy
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install frontend dependencies
-        run: npm ci --prefix frontend
-
-      - name: Run TypeScript type checking
-        run: npm --prefix frontend run typecheck
-
-      - name: Run frontend lint (warnings fail)
-        run: npm --prefix frontend run lint:strict
-
-      - name: Run frontend format check
-        run: npm --prefix frontend run format:check
-
       - name: Run tests
         run: uv run pytest tests -v --tb=short
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-${{ matrix.os }}
+          path: |
+            .pytest_cache/
+            coverage.xml
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------------------------
+  # pip-audit — scan installed Python packages for known CVEs
+  # ---------------------------------------------------------------------------
+  pip-audit:
+    name: pip-audit (Python supply chain)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run pip-audit
+        run: |
+          uv pip install pip-audit
+          uv run pip-audit --strict --desc on

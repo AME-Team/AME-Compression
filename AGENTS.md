@@ -9,27 +9,31 @@
 
 **This project must become the world's best video and audio compression application.**
 
-Not "world-class." Not "competitive." **World's #1.** Every line of code, every pixel of UI, every error message, every millisecond of response time — all must serve this goal. If you are unsure whether your output meets this standard, it does not. Rewrite it.
+Not "world-class". Not "competitive". **World's #1.** Every line of code, every pixel of UI, every error message, every millisecond of response time — all must serve this goal.
+
+If you are unsure whether your output meets this standard, it does not.
+
+Rewrite it.
 
 ---
 
 ## 1. PROJECT IDENTITY
 
-| Field | Value |
-|---|---|
-| **Name** | AmeCompression (雨 Compression) |
-| **Purpose** | Video (SVT-AV1) and audio (MP3) compression via FFmpeg |
-| **Stack** | Electron + React + TypeScript (frontend) / Python + Flask (backend) |
-| **Repo** | `tarminjapan/amecompression` |
-| **License** | MIT |
-| **Python** | >= 3.10 |
-| **Package Manager** | `uv` (backend), `npm` (frontend) |
+| Field               | Value                                                               |
+| ------------------- | ------------------------------------------------------------------- |
+| **Name**            | AmeCompression (雨 Compression)                                     |
+| **Purpose**         | Video (SVT-AV1) and audio (MP3) compression via FFmpeg              |
+| **Stack**           | Electron + React + TypeScript (frontend) / Python + Flask (backend) |
+| **Repo**            | `tarminjapan/amecompression`                                        |
+| **License**         | MIT                                                                 |
+| **Python**          | >= 3.10                                                             |
+| **Package Manager** | `uv` (backend), `npm` (frontend)                                    |
 
 ---
 
 ## 2. ARCHITECTURE MAP
 
-```
+```text
 AmeCompression/
 ├── frontend/                  # Electron + React + Vite
 │   ├── electron/              #   Electron main & preload scripts
@@ -82,7 +86,7 @@ AmeCompression/
 
 ### 3.2 Stability — Rock-Solid Under All Conditions
 
-- **Never crash.** Corrupt files, missing FFmpeg, network failures, permission errors, zero-byte files, absurdly large files — handle every edge case gracefully.
+- **Never crash.** Corrupt files, missing FFmpeg, network failures, permission errors, zero-byte files, absurdly large files — every edge case must be handled.
 - **Error messages.** Must be specific, actionable, and human-readable. Never expose raw stack traces to users. Never show generic "An error occurred."
 - **FFmpeg process management.** Always terminate child processes in `finally` blocks. Handle cancellation tokens. Never leave zombie processes.
 - **Type safety.** Every function has type hints. Every `None` possibility is handled. Never use `Optional` without guarding.
@@ -121,7 +125,9 @@ x = risky()  # type: ignore
 /* eslint-disable */
 ```
 
-**If a type error or lint warning appears, fix the root cause.** Restructure the code, correct the type definitions in `frontend/src/types/index.ts` or `backend/models.py`, or rewrite the logic. There is no excuse for suppression comments.
+**If a type error or lint warning appears, fix the root cause.** Restructure the code, correct the types in `frontend/src/types/index.ts` or `backend/models.py`, or rewrite.
+
+There is no excuse for suppression comments.
 
 ### 4.2 Other Prohibitions
 
@@ -217,7 +223,7 @@ cd frontend && npm run typecheck
 
 ### 7.1 Compression Job Lifecycle
 
-```
+```text
 User selects files (MediaView)
   → FloatingBar "Start Compression"
     → POST /api/jobs (backend/api/blueprints/jobs)
@@ -234,7 +240,7 @@ User selects files (MediaView)
 
 ### 7.2 Settings Flow
 
-```
+```text
 SettingsView (React)
   → GET/PUT /api/settings (backend/api/blueprints/settings)
     → SettingsManager (singleton, JSON file on disk)
@@ -243,7 +249,7 @@ SettingsView (React)
 
 ### 7.3 Profile System
 
-```
+```text
 MediaProfile (TypeScript interface, profiles.ts)
   → Stored in localStorage (browser/Electron)
   → Load/Save via loadProfiles() / saveProfiles()
@@ -254,15 +260,15 @@ MediaProfile (TypeScript interface, profiles.ts)
 
 ## 8. API ENDPOINTS
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/jobs` | Start a new compression job |
-| GET | `/api/jobs` | List all jobs with status/progress |
-| DELETE | `/api/jobs/:id` | Cancel a running job |
-| GET | `/api/media/info` | Get media file information (ffprobe) |
-| POST | `/api/media/volume-analyze` | Analyze volume level |
-| GET | `/api/settings` | Get all settings |
-| PUT | `/api/settings` | Update settings |
+| Method | Path                        | Purpose                              |
+| ------ | --------------------------- | ------------------------------------ |
+| POST   | `/api/jobs`                 | Start a new compression job          |
+| GET    | `/api/jobs`                 | List all jobs with status/progress   |
+| DELETE | `/api/jobs/:id`             | Cancel a running job                 |
+| GET    | `/api/media/info`           | Get media file information (FFprobe) |
+| POST   | `/api/media/volume-analyze` | Analyze volume level                 |
+| GET    | `/api/settings`             | Get all settings                     |
+| PUT    | `/api/settings`             | Update settings                      |
 
 ---
 
@@ -298,18 +304,18 @@ ffmpeg -i <input> -af volumedetect -vn -sn -dn -f null -
 
 ## 10. DEFAULT CONFIGURATION VALUES
 
-| Parameter | Default | Range |
-|-----------|---------|-------|
-| Video codec | `libsvtav1` | — |
-| CRF | `25` | 0–63 |
-| Preset | `6` | 0–13 |
-| Audio codec (video) | `aac` | — |
-| Audio codec (audio) | `libmp3lame` | — |
-| Audio bitrate | `192k` | 16k–320k |
-| Max resolution | `3840×2160` | — |
-| Target volume | `-16 dB` | — |
-| Max volume | `-1 dB` | — |
-| Denoise level | `0.15` | 0.0–1.0 |
+| Parameter           | Default      | Range    |
+| ------------------- | ------------ | -------- |
+| Video codec         | `libsvtav1`  | —        |
+| CRF                 | `25`         | 0–63     |
+| Preset              | `6`          | 0–13     |
+| Audio codec (video) | `aac`        | —        |
+| Audio codec (audio) | `libmp3lame` | —        |
+| Audio bitrate       | `192k`       | 16k–320k |
+| Max resolution      | `3840×2160`  | —        |
+| Target volume       | `-16 dB`     | —        |
+| Max volume          | `-1 dB`      | —        |
+| Denoise level       | `0.15`       | 0.0–1.0  |
 
 ---
 
@@ -329,18 +335,18 @@ Before finalizing any output, answer these questions:
 
 After completing any implementation, use these commands for verification:
 
-| Command | Purpose |
-|---------|---------|
-| `/gemini review` | Full code quality and UX review |
-| `/gemini summary` | Implementation status overview |
-| `/gemini` | General development support |
-| `/gemini help` | Command specification reference |
+| Command                      | Purpose                                |
+| ---------------------------- | -------------------------------------- |
+| `/gemini review`             | Full code quality and UX review        |
+| `/gemini summary`            | Implementation status overview         |
+| `/gemini`                    | General development support            |
+| `/gemini help`               | Command specification reference        |
 | `@gemini-code-assist <file>` | Module-specific optimization proposals |
 
 ---
 
 ## 13. FINAL REMINDER
 
-You are not writing code for a hobby project. You are building **the world's best compression application.** Every decision you make — from variable names to error handling to pixel alignment — must reflect this standard.
+You are not writing code for a hobby project. You are building **the world's best compression application.** Every decision — variable names, error handling, pixel alignment — must reflect this standard.
 
 **Good enough is the enemy of world's #1. Ship perfection.**

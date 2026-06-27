@@ -1,0 +1,49 @@
+{
+  "$schema": "https://textlint.github.io/docs/config.json",
+  "comment": [
+    "Project-wide Japanese prose linter.",
+    "",
+    "Policy: ALL issues are errors. There is no 'warning' or 'info' level —",
+    "any rule that fires blocks the commit. This enforces the project's",
+    "directive that 'every contributor produces the same quality of Japanese",
+    "regardless of background'. If a rule is too noisy, either tune its",
+    "threshold, disable it explicitly, or rewrite the source.",
+    "",
+    "Rule packages used:",
+    "  - preset-japanese: balanced Japanese writing rules",
+    "  - preset-jtf-style: JTF translation-style rules (subset)",
+    "  - prefer-tari-tari: enforce '〜たり〜たり' for non-exhaustive lists",
+    "  - prh: project glossary (.prh.yml)"
+  ],
+  "plugins": {},
+  "filters": {},
+  "rules": {
+    "preset-japanese": {
+      "max-ten": {
+        "max": 4
+      },
+      "no-doubled-conjunction": true,
+      "no-doubled-conjunctive-particle": true,
+      "sentence-length": {
+        "max": 200
+      },
+      "no-doubled-joshi": {
+        "min_interval": 2,
+        "strict": false,
+        "allow": ["の", "を", "に", "と", "で", "へ"]
+      },
+      "no-mix-dearu-desumasu": {
+        "preferInHeader": "",
+        "preferInBody": "ですます",
+        "preferInList": "ですます"
+      },
+      "no-start-duplicated-conjunction": true,
+      "no-doubled-negative": true
+    },
+    "preset-jtf-style": true,
+    "prefer-tari-tari": true,
+    "prh": {
+      "rulePaths": [".prh.yml"]
+    }
+  }
+}

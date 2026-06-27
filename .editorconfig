@@ -1,0 +1,112 @@
+# =============================================================================
+# EditorConfig — Project-wide editor consistency rules
+# =============================================================================
+# This is the root truth for line endings, indentation, encoding and final
+# newline policy. Every editor (VS Code, JetBrains, Vim, Emacs, ...) and every
+# CLI formatter (Prettier, Ruff, YAML formatter, ...) reads this file, so
+# contributors cannot accidentally introduce mixed line endings or tabs/spaces
+# confusion regardless of their OS or settings.
+#
+# The .gitattributes file reinforces these choices at the Git layer.
+# Reference: https://editorconfig.org/
+# =============================================================================
+
+root = true
+
+# -----------------------------------------------------------------------------
+# Default — applied to every file unless overridden below.
+# -----------------------------------------------------------------------------
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+max_line_length = 100
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
+[*.py]
+indent_size = 4
+max_line_length = 100
+
+# -----------------------------------------------------------------------------
+# Frontend (TypeScript / JavaScript / JSX / CSS)
+# Prettier enforces 2-space indentation for the frontend stack.
+# -----------------------------------------------------------------------------
+[*.{ts,tsx,js,jsx,mjs,cjs,cts,mts}]
+indent_size = 2
+max_line_length = 100
+
+[*.{css,scss,sass,less}]
+indent_size = 2
+
+# -----------------------------------------------------------------------------
+# JSON / YAML / TOML
+# -----------------------------------------------------------------------------
+[*.{json,jsonc,json5}]
+indent_size = 2
+
+[*.{yaml,yml}]
+indent_size = 2
+
+[*.toml]
+indent_size = 2
+
+# -----------------------------------------------------------------------------
+# Markdown — preserve trailing whitespace (two spaces = forced line break).
+# -----------------------------------------------------------------------------
+[*.md]
+indent_size = 2
+trim_trailing_whitespace = false
+max_line_length = off
+
+# -----------------------------------------------------------------------------
+# Shell scripts
+# -----------------------------------------------------------------------------
+[*.sh]
+indent_size = 4
+shell_variant = bash
+
+# -----------------------------------------------------------------------------
+# Makefiles — MUST use real tabs (GNU make requirement).
+# -----------------------------------------------------------------------------
+[Makefile]
+indent_style = tab
+
+[{Makefile,GNUmakefile,makefile}]
+indent_style = tab
+
+# -----------------------------------------------------------------------------
+# Batch files (Windows) — CRLF is the historical convention, but we keep LF
+# for cross-platform consistency via .gitattributes.
+# -----------------------------------------------------------------------------
+[*.bat]
+end_of_line = lf
+
+# -----------------------------------------------------------------------------
+# License / plain text
+# -----------------------------------------------------------------------------
+[*.{txt,mdx}]
+trim_trailing_whitespace = false
+max_line_length = off
+
+# -----------------------------------------------------------------------------
+# Git & config files
+# -----------------------------------------------------------------------------
+[{COMMIT_EDITMSG,MERGE_MSG}]
+max_line_length = 72
+
+# -----------------------------------------------------------------------------
+# Binary files — EditorConfig ignores these but we list them for clarity.
+# -----------------------------------------------------------------------------
+[*.{png,jpg,jpeg,gif,webp,ico,icns,zip,gz,tar,tgz,whl,exe,dll,so,dylib,bin}]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset
+max_line_length = unset

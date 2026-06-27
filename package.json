@@ -1,0 +1,31 @@
+{
+  "name": "ame-compression-tooling",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Project-wide linting and formatting toolchain for markdown, text, YAML and commit messages. NOT a published package.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "npm@11",
+  "scripts": {
+    "lint:md": "markdownlint-cli2",
+    "lint:md:fix": "markdownlint-cli2 --fix",
+    "lint:text": "textlint -f pretty-error .",
+    "lint:text:fix": "textlint --fix .",
+    "lint:commit": "commitlint --from=HEAD~10 --to=HEAD --verbose",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.1.0",
+    "@commitlint/config-conventional": "^21.1.0",
+    "markdownlint-cli2": "^0.22.1",
+    "prettier": "^3.6.2",
+    "textlint": "^15.7.1",
+    "textlint-rule-preset-japanese": "^10.0.4",
+    "textlint-rule-preset-jtf-style": "^3.0.3",
+    "textlint-rule-prefer-tari-tari": "^1.0.3",
+    "textlint-rule-prh": "^6.1.0"
+  }
+}

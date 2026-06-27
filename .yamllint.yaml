@@ -1,0 +1,100 @@
+# =============================================================================
+# yamllint — project configuration
+# =============================================================================
+# Reference: https://yamllint.readthedocs.io/
+#
+# This config is intentionally RELAXED in places because GitHub Actions
+# workflow files use a specific style (e.g. `on:` as a key, multi-document
+# streams, embedded shell snippets). We still enforce the rules that catch
+# real bugs: tabs (via `indentation`), trailing whitespace, missing final
+# newline, document-end marker issues, and key duplication.
+# =============================================================================
+
+yaml-version: "1.1"
+
+extends: default
+
+rules:
+  # ---------------------------------------------------------------------------
+  # Indentation — 2 spaces, no tabs. Lists follow parent context.
+  # ---------------------------------------------------------------------------
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+    check-multi-line-strings: false
+
+  # ---------------------------------------------------------------------------
+  # Line length — disabled because shell snippets inside `run:` blocks exceed
+  # 80 cols naturally. Prettier handles wrapping of normal YAML.
+  # ---------------------------------------------------------------------------
+  line-length: disable
+
+  # ---------------------------------------------------------------------------
+  # Document markers — GitHub Actions files have no `---` header
+  # ---------------------------------------------------------------------------
+  document-start: disable
+  document-end: disable
+
+  # ---------------------------------------------------------------------------
+  # Quoting — both styles allowed; never required
+  # ---------------------------------------------------------------------------
+  quoted-strings:
+    quote-type: any
+    required: false
+
+  # ---------------------------------------------------------------------------
+  # Comments
+  # ---------------------------------------------------------------------------
+  comments:
+    require-starting-space: true
+    ignore-shebangs: true
+
+  comments-indentation: enable
+
+  # ---------------------------------------------------------------------------
+  # Trailing / empty lines
+  # ---------------------------------------------------------------------------
+  trailing-spaces: enable
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+
+  # ---------------------------------------------------------------------------
+  # Braces / brackets — zero inner spaces (compact)
+  # ---------------------------------------------------------------------------
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+
+  brackets:
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+
+  # ---------------------------------------------------------------------------
+  # Strict bug-catchers — always on
+  # ---------------------------------------------------------------------------
+  key-duplicates: enable
+  key-ordering: disable
+  new-line-at-end-of-file: enable
+  new-lines:
+    type: unix
+  # NOTE: check-keys is disabled because GitHub Actions uses `on:` as a
+  # top-level key, which YAML 1.1 parses as a boolean. yamllint would
+  # false-positive on every workflow file otherwise.
+  truthy:
+    level: warning
+    allowed-values: ["true", "false"]
+    check-keys: false
+
+  # ---------------------------------------------------------------------------
+  # Misc — explicit enable for clarity
+  # ---------------------------------------------------------------------------
+  anchors: enable
+  octal-values: disable
+  empty-values: disable
+  hyphens: enable
+  colons:
+    max-spaces-before: 0
+    max-spaces-after: 1
+  commas: enable

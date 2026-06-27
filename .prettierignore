@@ -1,0 +1,87 @@
+# =============================================================================
+# Prettier (root) — ignore patterns
+# =============================================================================
+# This controls the ROOT-level Prettier (for Markdown / YAML / JSON / etc.).
+# The frontend has its own `.prettierignore` inside `frontend/`.
+# Frontend TS/TSX/CSS files are formatted by the frontend-local Prettier
+# config, so we exclude the whole `frontend/` directory from the root tool to
+# avoid double-formatting.
+# =============================================================================
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+.venv/
+.pip-cache/
+
+# Lockfiles (machine-generated)
+package-lock.json
+frontend/package-lock.json
+uv.lock
+pnpm-lock.yaml
+yarn.lock
+
+# Build output
+dist/
+build/
+frontend/dist/
+.pyinstaller/
+*.spec
+
+# Cache directories
+.cache/
+.parcel-cache/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.pyright/
+.pytype/
+coverage/
+.next/
+.turbo/
+
+# VCS / IDE
+.git/
+.gitattributes
+.github/
+.vscode/
+.idea/
+
+# Generated artifacts
+**/*.min.js
+**/*.min.css
+
+# Binary assets
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.icns
+*.zip
+*.gz
+*.tar
+*.tgz
+*.whl
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Frontend (handled by its own Prettier config)
+frontend/src/
+frontend/electron/
+frontend/index.html
+frontend/vite.config.ts
+frontend/eslint.config.js
+frontend/tsconfig*.json
+frontend/.prettierrc
+frontend/package.json
+
+# License files (preserved as-is)
+LICENSE
+LICENSE_FFMPEG.txt
+
+# Documents that are intentionally formatted manually
+documents/migration_guide.md

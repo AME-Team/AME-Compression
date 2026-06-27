@@ -1,0 +1,25 @@
+# =============================================================================
+# shellcheck — project configuration
+# =============================================================================
+# Reference: https://github.com/koalaman/shellcheck
+#
+# Policy: MAXIMUM strictness. The pre-commit hook uses `--severity=style`,
+# which enables every check (style, info, warning, error). The only disables
+# below are for shellcheck's known limitations (it cannot follow dynamic
+# `source` statements), NOT for stylistic preferences.
+# =============================================================================
+
+enable-all: true
+
+disable:
+  # These are shellcheck's own limitations, not stylistic preferences:
+  - SC1090  # "Can't follow non-constant source" — external/dynamic scripts
+  - SC1091  # Same as above (file path is computed at runtime)
+
+# Treat all scripts as bash (we standardize on bash features)
+shell: bash
+
+external-sources: true
+
+# GCC-style output for clear file:line:col references
+format: gcc
