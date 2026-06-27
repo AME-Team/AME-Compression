@@ -1,0 +1,124 @@
+name: PR Agent - Multi-Reviewers (OpenCodeGo)
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+
+jobs:
+  # ==========================================
+  # 1. デフォルトのコードレビュアー（通常品質チェック）
+  # ==========================================
+  default_reviewer:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+      contents: read
+    steps:
+      - name: Default Review
+        uses: Codium-ai/pr-agent@main
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # OpenCodeGoのAPI Keyがここに入ります
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AGENT.PR_COMMANDS: '["/review"]'
+          PR_REVIEW.LANGUAGE: "ja"
+          # OpenCodeGo (DeepSeek-V4-Pro) 向けのLLM設定
+          CONFIG.MODEL: "openai/deepseek-v4-pro"
+          OPENAI.API_BASE: "https://api.opencode.ai/v1"
+          PR_REVIEW.EXTRA_INSTRUCTIONS: |
+            あなたは「シニア・ソフトウェアエンジニア」として、コードの一般的な品質をレビューしてください。
+            以下の点に焦点を当てて、具体的かつ建設的なフィードバックを日本語で提供してください：
+            1. バグの可能性、エッジケースでの挙動不審、メモリリーク、リソースの解放漏れがないか。
+            2. コードの可読性、保守性、および設計パターンの適用が適切か（過度な複雑化の回避）。
+            3. 効率的なアルゴリズムが使われているか、不要なループや重い処理がないか。
+            4. 変数名やメソッド名が、意図を明確に表しているか。
+
+  # ==========================================
+  # 2. Document専用レビュアー（ドキュメント同期チェック）
+  # ==========================================
+  document_reviewer:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+      contents: read
+    steps:
+      - name: Document Review
+        uses: Codium-ai/pr-agent@main
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AGENT.PR_COMMANDS: '["/review"]'
+          PR_REVIEW.LANGUAGE: "ja"
+          CONFIG.MODEL: "openai/deepseek-v4-pro"
+          OPENAI.API_BASE: "https://api.opencode.ai/v1"
+          PR_REVIEW.EXTRA_INSTRUCTIONS: |
+            あなたは「ドキュメント・品質管理専門」のレビュアーです。
+            コードの変更内容と、プロジェクト内のドキュメント（README、各種Markdown、設計書等）、およびコード内の公開APIコメント（XMLコメントやDocstring等）の整合性を厳しくチェックしてください。
+            以下の変更がある場合、対応するドキュメントが適切に更新・追加されているか確認してください：
+            1. 新しい機能、コンポーネント、または設定値の追加。
+            2. 既存の仕様や振る舞い（挙動）、インターフェースの変更。
+            3. 依存ライブラリの追加・変更。
+            もし、コードが大きく変わっているにもかかわらず、ドキュメントの更新が漏れている、あるいは古い記述のままである場合は、どのファイルのどの記述を修正すべきか具体的に指摘してください。
+
+  # ==========================================
+  # 3. セキュリティレビュアー（脆弱性・機密情報チェック）
+  # ==========================================
+  security_reviewer:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+      contents: read
+    steps:
+      - name: Security Review
+        uses: Codium-ai/pr-agent@main
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AGENT.PR_COMMANDS: '["/review"]'
+          PR_REVIEW.LANGUAGE: "ja"
+          CONFIG.MODEL: "openai/deepseek-v4-pro"
+          OPENAI.API_BASE: "https://api.opencode.ai/v1"
+          PR_REVIEW.EXTRA_INSTRUCTIONS: |
+            あなたは「セキュリティ監査専門」のホワイトハッカー・リードレビュアーです。
+            OWASP Top 10などの主要な脆弱性が混入していないか、コードを厳格に静的解析してください。
+            特に以下のリスクを重点的にチェックしてください：
+            1. SQLインジェクション、XSS、OSコマンドインジェクションの脆弱性（ユーザー入力をそのまま処理していないか）。
+            2. パスワード、APIキー、トークン、秘密鍵などの機密情報（Credentials）のハードコーディング。
+            3. 不適切な認証・認可制御、パス・トラバーサル（ディレクトリ遡り）のリスク。
+            4. 危険な関数や、脆弱性が報告されている古いライブラリ・メソッドの使用。
+            リスクを発見した場合は、その危険性と、具体的な修正案（安全な実装パターン）を日本語で提示してください。
+
+  # ==========================================
+  # 4. 違反行為チェック用レビュアー（テスト＆静的解析回避の監視）
+  # ==========================================
+  compliance_reviewer:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+      contents: read
+    steps:
+      - name: Compliance Review
+        uses: Codium-ai/pr-agent@main
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AGENT.PR_COMMANDS: '["/review"]'
+          PR_REVIEW.LANGUAGE: "ja"
+          CONFIG.MODEL: "openai/deepseek-v4-pro"
+          OPENAI.API_BASE: "https://api.opencode.ai/v1"
+          PR_REVIEW.EXTRA_INSTRUCTIONS: |
+            あなたは「開発プロセス・コンプライアンス（規約違反）チェック専門」の厳格なレビュアーです。
+            開発者が品質のガイドラインを迂回しようとしていないか、以下の2点を厳しく監査してください：
+
+            1. テストの追加・修正漏れのチェック：
+               - ロジック（プロダクションコード）が追加、または変更されているにもかかわらず、対応するテストコード（Unit Test等）が追加・修正されていない場合は、必ずそれを指摘し、テストを書くよう促してください。
+
+            2. 静的解析無視コメント（警告の握りつぶし）の検知：
+               - Linterや静的解析ツールの警告を強引に黙らせるための「警告無視コメント」が不適切に挿入されていないか確認してください。
+               - 例: 言語やツールに応じた無視コメント（C#の #pragma warning dis-able, Pythonの # no-qa, # type: ig-nore, ESLintの /* eslint-dis-able */ など）。
+               - もしこれらのコメントが追加されているのを発見した場合は、警告を根本から解決せず、コメントで隠蔽した理由（正当な理由があるのか）を開発者に厳しく問いただすよう指摘してください。
