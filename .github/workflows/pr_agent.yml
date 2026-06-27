@@ -20,11 +20,13 @@ jobs:
       - name: Default Review
         uses: Codium-ai/pr-agent@main
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # OpenCodeGoのAPI Keyがここに入ります
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}  # PR-Agentが期待する本来のキー名
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT__PR_COMMANDS: '["/review"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
           GITHUB_ACTION_CONFIG__HANDLE_SYNCHRONIZE: true
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
           PR_REVIEW__LANGUAGE: "ja"
           # OpenCodeGo (DeepSeek-V4-Pro) 向けのLLM設定
           CONFIG__MODEL: "openai/deepseek-v4-pro"
@@ -51,11 +53,13 @@ jobs:
       - name: Document Review
         uses: Codium-ai/pr-agent@main
         env:
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT__PR_COMMANDS: '["/review"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
           GITHUB_ACTION_CONFIG__HANDLE_SYNCHRONIZE: true
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
           PR_REVIEW__LANGUAGE: "ja"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
@@ -82,11 +86,13 @@ jobs:
       - name: Security Review
         uses: Codium-ai/pr-agent@main
         env:
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT__PR_COMMANDS: '["/review"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
           GITHUB_ACTION_CONFIG__HANDLE_SYNCHRONIZE: true
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
           PR_REVIEW__LANGUAGE: "ja"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
@@ -114,11 +120,13 @@ jobs:
       - name: Compliance Review
         uses: Codium-ai/pr-agent@main
         env:
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT__PR_COMMANDS: '["/review"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
           GITHUB_ACTION_CONFIG__HANDLE_SYNCHRONIZE: true
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
           PR_REVIEW__LANGUAGE: "ja"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
@@ -132,5 +140,5 @@ jobs:
 
             2. 静的解析無視コメント（警告の握りつぶし）の検知：
                - Linterや静的解析ツールの警告を強引に黙らせるための「警告無視コメント」が不適切に挿入されていないか確認してください。
-               - 例: 言語やツールに応じた無視コメント（C#の #pragma warning dis-able, Python of # no-qa, # type: ig-nore, ESLint of /* eslint-dis-able */ etc）。
+               - 例: 言語やツールに応じた無視コメント（C#の #pragma warning dis-able, Pythonの # no-qa, # type: ig-nore, ESLintの /* eslint-dis-able */ など）。
                - もしこれらのコメントが追加されているのを発見した場合は、警告を根本から解決せず、コメントで隠蔽した理由（正当な理由があるのか）を開発者に厳しく問いただすよう指摘してください。
