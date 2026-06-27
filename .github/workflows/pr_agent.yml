@@ -2,7 +2,7 @@ name: PR Agent - Multi-Reviewers (OpenCodeGo)
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened, ready_for_review, synchronize]
   issue_comment:
     types: [created]
 
@@ -31,7 +31,7 @@ jobs:
           PR_REVIEW.EXTRA_INSTRUCTIONS: |
             あなたは「シニア・ソフトウェアエンジニア」として、コードの一般的な品質をレビューしてください。
             以下の点に焦点を当てて、具体的かつ建設的なフィードバックを日本語で提供してください：
-            1. バグの可能性、エッジケースでの挙動不審、メモリリーク、リソース of 解放漏れがないか。
+            1. バグの可能性、エッジケースでの挙動不審、メモリリーク、リソースの解放漏れがないか。
             2. コードの可読性、保守性、および設計パターンの適用が適切か（過度な複雑化の回避）。
             3. 効率的なアルゴリズムが使われているか、不要なループや重い処理がないか。
             4. 変数名やメソッド名が、意図を明確に表しているか。
