@@ -118,28 +118,33 @@ jobs:
           fi
 
   # ---------------------------------------------------------------------------
-  # dependency-review — block PRs that introduce known-vulnerable deps
+  # supply-chain — npm audit (no GitHub Advanced Security dependency)
   # ---------------------------------------------------------------------------
-  # NOTE: This job requires the "Dependency graph" feature to be enabled in
-  # the repository's Settings > Code Security. On repos where it is disabled,
-  # the action fails with "Dependency review is not supported on this
-  # repository". We use continue-on-error so that the overall workflow stays
-  # green on repos that have not yet enabled the feature; enable the setting
-  # to make this check enforceable.
-  dependency-review:
-    name: dependency-review (vulnerabilities)
+  # Replaces `dependency-review-action`, which requires the GitHub
+  # "Dependency graph" feature (a repo setting that is disabled on private
+  # repos by default). `npm audit` performs the equivalent scan against the
+  # npm registry advisory database and works on any repo.
+  #
+  # We audit PRODUCTION dependencies only (`--omit=dev`) at `high` severity,
+  # because dev-only tooling vulnerabilities do not ship to users and would
+  # otherwise create un-actionable noise from upstream packages outside our
+  # control. Python supply-chain is covered by `pip-audit` in `tests.yml`.
+  supply-chain:
+    name: npm audit (supply chain)
     runs-on: ubuntu-24.04
     timeout-minutes: 5
-    if: github.event_name == 'pull_request'
-    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Dependency review
-        uses: actions/dependency-review-action@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          fail-on-severity: moderate
-          comment-summary-in-pr: on-failure
-          # Allow MIT and ISC (the only licenses this project ships under)
-          deny-licenses: AGPL-3.0-only, AGPL-3.0-or-later, GPL-3.0-only, GPL-3.0-or-later
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Audit frontend production dependencies
+        run: npm audit --omit=dev --audit-level=high --prefix frontend
