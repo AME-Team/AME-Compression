@@ -31,7 +31,7 @@ jobs:
           # OpenCodeGo (DeepSeek-V4-Pro) 向けのLLM設定
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          OPENAI__API_BASE: "https://api.opencode.ai/v1"
+          OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
           PR_REVIEW__EXTRA_INSTRUCTIONS: |
             あなたは「シニア・ソフトウェアエンジニア」として、コードの一般的な品質をレビューしてください。
             以下の点に焦点を当てて、具体的かつ建設的なフィードバックを日本語で提供してください：
@@ -63,7 +63,7 @@ jobs:
           PR_REVIEW__LANGUAGE: "ja"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          OPENAI__API_BASE: "https://api.opencode.ai/v1"
+          OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
           PR_REVIEW__EXTRA_INSTRUCTIONS: |
             あなたは「ドキュメント・品質管理専門」のレビュアーです。
             コードの変更内容と、プロジェクト内のドキュメント（README、各種Markdown、設計書等）、およびコード内の公開APIコメント（XMLコメントやDocstring等）の整合性を厳しくチェックしてください。
@@ -96,7 +96,7 @@ jobs:
           PR_REVIEW__LANGUAGE: "ja"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          OPENAI__API_BASE: "https://api.opencode.ai/v1"
+          OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
           PR_REVIEW__EXTRA_INSTRUCTIONS: |
             あなたは「セキュリティ監査専門」のホワイトハッカー・リードレビュアーです。
             OWASP Top 10などの主要な脆弱性が混入していないか、コードを厳格に静的解析してください。
@@ -130,7 +130,7 @@ jobs:
           PR_REVIEW__LANGUAGE: "ja"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          OPENAI__API_BASE: "https://api.opencode.ai/v1"
+          OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
           PR_REVIEW__EXTRA_INSTRUCTIONS: |
             あなたは「開発プロセス・コンプライアンス（規約違反）チェック専門」の厳格なレビュアーです。
             開発者が品質のガイドラインを迂回しようとしていないか、以下の2点を厳しく監査してください：
