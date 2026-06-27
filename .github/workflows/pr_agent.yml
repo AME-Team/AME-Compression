@@ -12,13 +12,16 @@ jobs:
   # ==========================================
   default_reviewer:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request)
     permissions:
       pull-requests: write
       issues: write
       contents: read
     steps:
       - name: Default Review
-        uses: Codium-ai/pr-agent@main
+        uses: Codium-ai/pr-agent@v0.31
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}  # PR-Agentが期待する本来のキー名
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -45,13 +48,16 @@ jobs:
   # ==========================================
   document_reviewer:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request)
     permissions:
       pull-requests: write
       issues: write
       contents: read
     steps:
       - name: Document Review
-        uses: Codium-ai/pr-agent@main
+        uses: Codium-ai/pr-agent@v0.31
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -78,13 +84,16 @@ jobs:
   # ==========================================
   security_reviewer:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request)
     permissions:
       pull-requests: write
       issues: write
       contents: read
     steps:
       - name: Security Review
-        uses: Codium-ai/pr-agent@main
+        uses: Codium-ai/pr-agent@v0.31
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -112,13 +121,16 @@ jobs:
   # ==========================================
   compliance_reviewer:
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request)
     permissions:
       pull-requests: write
       issues: write
       contents: read
     steps:
       - name: Compliance Review
-        uses: Codium-ai/pr-agent@main
+        uses: Codium-ai/pr-agent@v0.31
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
