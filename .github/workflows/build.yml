@@ -90,7 +90,7 @@ jobs:
         run: uv run python scripts/build.py
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: AME-Compression-windows
           path: dist/AME-Compression/
@@ -137,7 +137,7 @@ jobs:
         run: uv run python scripts/build.py --onefile
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: AME-Compression-onefile
           path: dist/AME-Compression.exe
