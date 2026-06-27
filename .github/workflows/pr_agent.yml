@@ -24,7 +24,7 @@ jobs:
         run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_ENV
 
       - name: Default Review
-        uses: Codium-ai/pr-agent@v0.31
+        uses: Codium-ai/pr-agent@f3eb6838b0aa44cda90691e5ef5a53c0
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}  # PR-Agentが期待する本来のキー名
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -57,15 +57,15 @@ jobs:
             PR_NUMBER=${{ github.event.issue.number }}
           fi
           echo "Job start time: $START_TIME"
-
+          
           # github-actions[bot]がジョブ開始以降に投稿したコメントをスキャン
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] |
-            select(.author.login | contains(\"github-actions\")) |
-            select(.createdAt >= \"$START_TIME\") |
+            .comments[] | 
+            select(.author.login | contains(\"github-actions\")) | 
+            select(.createdAt >= \"$START_TIME\") | 
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
-
+          
           if [ -n "$errors" ]; then
             echo "::error::PR Review failed: $errors"
             exit 1
@@ -89,7 +89,7 @@ jobs:
         run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_ENV
 
       - name: Document Review
-        uses: Codium-ai/pr-agent@v0.31
+        uses: Codium-ai/pr-agent@f3eb6838b0aa44cda90691e5ef5a53c0
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -122,14 +122,14 @@ jobs:
             PR_NUMBER=${{ github.event.issue.number }}
           fi
           echo "Job start time: $START_TIME"
-
+          
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] |
-            select(.author.login | contains(\"github-actions\")) |
-            select(.createdAt >= \"$START_TIME\") |
+            .comments[] | 
+            select(.author.login | contains(\"github-actions\")) | 
+            select(.createdAt >= \"$START_TIME\") | 
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
-
+          
           if [ -n "$errors" ]; then
             echo "::error::PR Review failed: $errors"
             exit 1
@@ -153,7 +153,7 @@ jobs:
         run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_ENV
 
       - name: Security Review
-        uses: Codium-ai/pr-agent@v0.31
+        uses: Codium-ai/pr-agent@f3eb6838b0aa44cda90691e5ef5a53c0
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -187,14 +187,14 @@ jobs:
             PR_NUMBER=${{ github.event.issue.number }}
           fi
           echo "Job start time: $START_TIME"
-
+          
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] |
-            select(.author.login | contains(\"github-actions\")) |
-            select(.createdAt >= \"$START_TIME\") |
+            .comments[] | 
+            select(.author.login | contains(\"github-actions\")) | 
+            select(.createdAt >= \"$START_TIME\") | 
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
-
+          
           if [ -n "$errors" ]; then
             echo "::error::PR Review failed: $errors"
             exit 1
@@ -218,7 +218,7 @@ jobs:
         run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_ENV
 
       - name: Compliance Review
-        uses: Codium-ai/pr-agent@v0.31
+        uses: Codium-ai/pr-agent@f3eb6838b0aa44cda90691e5ef5a53c0
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -240,7 +240,7 @@ jobs:
 
             2. 静的解析無視コメント（警告の握りつぶし）の検知：
                - Linterや静的解析ツールの警告を強引に黙らせるための「警告無視コメント」が不適切に挿入されていないか確認してください。
-               - 例: 言語やツールに応じた無視コメント（C#の #pragma warning dis-able, Pythonの # no-qa, # type: ig-nore, ESLint of /* eslint-dis-able */ など）。
+               - 例: 言語やツールに応じた無視コメント（C#の #pragma warning dis-able, Pythonの # no-qa, # type: ig-nore, ESLintの /* eslint-dis-able */ など）。
                - もしこれらのコメントが追加されているのを発見した場合は、警告を根本から解決せず、コメントで隠蔽した理由（正当な理由があるのか）を開発者に厳しく問いただすよう指摘してください。
 
       - name: Check Review Success
@@ -254,14 +254,14 @@ jobs:
             PR_NUMBER=${{ github.event.issue.number }}
           fi
           echo "Job start time: $START_TIME"
-
+          
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] |
-            select(.author.login | contains(\"github-actions\")) |
-            select(.createdAt >= \"$START_TIME\") |
+            .comments[] | 
+            select(.author.login | contains(\"github-actions\")) | 
+            select(.createdAt >= \"$START_TIME\") | 
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
-
+          
           if [ -n "$errors" ]; then
             echo "::error::PR Review failed: $errors"
             exit 1
