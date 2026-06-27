@@ -218,10 +218,9 @@ __marimo__/
 # =============================================================================
 # NOTE: The frontend has its own package.json + node_modules under frontend/.
 # The root-level package.json installs dev-only linting tools that must not
-# ship with the application, so we ignore both node_modules and the lockfile
-# here. CI reinstalls them from package.json on every run.
+# ship with the application. We commit package-lock.json for reproducible CI
+# (npm ci) but ignore node_modules.
 node_modules/
-package-lock.json
 
 # =============================================================================
 # Tool caches
