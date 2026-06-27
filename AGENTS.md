@@ -217,6 +217,11 @@ cd frontend && npm run typecheck
 - **Commit messages:** Imperative mood, concise. e.g., `feat: add audio denoise slider`, `fix: handle corrupt file input`
 - **PR scope:** One feature or fix per PR. Keep it focused.
 
+### 6.4 Language & Communication Conventions
+
+- **Default Language:** PR descriptions, PR comments, issue descriptions, and AI agent review findings must be generated in **Japanese** (`ja`).
+- **User Interactions:** All explanations, progress updates, and code change reports to the user must be written in **Japanese**.
+
 ---
 
 ## 7. KEY DATA FLOWS
