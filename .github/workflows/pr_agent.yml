@@ -23,6 +23,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # OpenCodeGoのAPI Keyがここに入ります
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
+          PR_AGENT.AUTO_REVIEW: "true"
           PR_REVIEW.LANGUAGE: "ja"
           # OpenCodeGo (DeepSeek-V4-Pro) 向けのLLM設定
           CONFIG.MODEL: "openai/deepseek-v4-pro"
@@ -52,6 +53,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
+          PR_AGENT.AUTO_REVIEW: "true"
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
           CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
@@ -81,6 +83,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
+          PR_AGENT.AUTO_REVIEW: "true"
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
           CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
@@ -111,6 +114,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
+          PR_AGENT.AUTO_REVIEW: "true"
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
           CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
@@ -124,5 +128,5 @@ jobs:
 
             2. 静的解析無視コメント（警告の握りつぶし）の検知：
                - Linterや静的解析ツールの警告を強引に黙らせるための「警告無視コメント」が不適切に挿入されていないか確認してください。
-               - 例: 言語やツールに応じた無視コメント（C#の #pragma warning dis-able, Pythonの # no-qa, # type: ig-nore, ESLintの /* eslint-dis-able */ など）。
+               - 例: 言語やツールに応じた無視コメント（C#の #pragma warning dis-able, Python of # no-qa, # type: ig-nore, ESLintの /* eslint-dis-able */ など）。
                - もしこれらのコメントが追加されているのを発見した場合は、警告を根本から解決せず、コメントで隠蔽した理由（正当な理由があるのか）を開発者に厳しく問いただすよう指摘してください。
