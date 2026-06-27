@@ -1,0 +1,116 @@
+# =============================================================================
+# Dependabot — automated dependency update PRs
+# =============================================================================
+# Keeps the toolchain current across all four ecosystems used by the project.
+# Each ecosystem runs on its own weekly schedule (offset to spread load) and
+# is limited to a small, reviewable PR limit per run.
+# =============================================================================
+
+version: 2
+
+updates:
+  # ---------------------------------------------------------------------------
+  # Python (uv / pyproject.toml) — runtime + dev tooling
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "python"]
+    commit-message:
+      prefix: "build(deps)"
+      include: scope
+    groups:
+      python-dev:
+        patterns:
+          - "ruff"
+          - "pyright"
+          - "mypy"
+          - "pytest"
+          - "pytest-cov"
+          - "pyinstaller"
+          - "pre-commit"
+
+  # ---------------------------------------------------------------------------
+  # npm (root package.json) — markdownlint / textlint / commitlint / prettier
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:30"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "tooling"]
+    commit-message:
+      prefix: "build(deps-tools)"
+      include: scope
+    groups:
+      textlint:
+        patterns:
+          - "textlint"
+          - "textlint-*"
+          - "@textlint/*"
+      commitlint:
+        patterns:
+          - "@commitlint/*"
+          - "commitlint*"
+
+  # ---------------------------------------------------------------------------
+  # npm (frontend package.json) — React / Vite / TypeScript / ESLint
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: npm
+    directory: "/frontend"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "npm", "frontend"]
+    commit-message:
+      prefix: "build(deps-frontend)"
+      include: scope
+    groups:
+      eslint:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@eslint/*"
+          - "typescript-eslint"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-hooks"
+          - "react-refresh"
+          - "react-i18next"
+          - "i18next"
+          - "i18next-*"
+          - "@types/react*"
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "vite-*"
+
+  # ---------------------------------------------------------------------------
+  # GitHub Actions — workflow action versions
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:30"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "ci"]
+    commit-message:
+      prefix: "ci(deps)"
+      include: scope

@@ -1,86 +1,83 @@
 # =============================================================================
-# Pre-commit Hooks for AME Compression
+# Pre-commit Hooks for AmeCompression
 # =============================================================================
-# インストール: pre-commit install
-# 手動実行: pre-commit run --all-files
+# Install (one-time):
+#   pre-commit install --install-hooks -t pre-commit -t commit-msg -t pre-push
+#
+# Manual run:
+#   pre-commit run --all-files            # all file hooks
+#   pre-commit run --hook-stage commit-msg --commit-msg-fn .git/COMMIT_EDITMSG
+#
+# Update hook versions:
+#   pre-commit autoupdate
+#
+# This file is the single source of truth for static analysis. The CI
+# workflow (`.github/workflows/lint.yml`) runs `pre-commit run --all-files`
+# so that local and CI behavior are ALWAYS identical.
 # =============================================================================
 
+default_stages: [pre-commit, pre-merge-commit]
+default_install_hook_types: [pre-commit, commit-msg, pre-push]
+minimum_pre_commit_version: "4.0.0"
+
+# -----------------------------------------------------------------------------
+# Global exclude — never run any hook on these.
+# -----------------------------------------------------------------------------
+exclude: |
+  (?x)^(
+      uv\.lock|
+      frontend/package-lock\.json|
+      frontend/package-lock\.json\.patch|
+      package-lock\.json|
+      \.venv/.*|
+      frontend/node_modules/.*|
+      node_modules/.*|
+      \.git/.*|
+      dist/.*|
+      build/.*|
+      frontend/dist/.*|
+      \.pyinstaller/.*|
+      \.ruff_cache/.*|
+      \.mypy_cache/.*|
+      \.pytest_cache/.*|
+      \.pyright/.*|
+      AmeCompression\.spec|
+      LICENSE_FFMPEG\.txt|
+      LICENSE|
+      assets/.*|
+      \.antigravitycli/.*
+  )$
+
 repos:
-  # エラー抑制コメントの禁止
+  # ===========================================================================
+  # 1. Project-policy guard rails
+  # ===========================================================================
+  # Local rule: forbid error-suppression directives in source files (the
+  # patterns documented in AGENTS.md section 4.1). The companion script
+  # lives at scripts/check_suppression_comments.py and matches a curated
+  # list of common Python / TypeScript / JavaScript suppression markers.
   - repo: local
     hooks:
       - id: prohibit-suppression-comments
-        name: prohibit suppression comments
+        name: "policy: prohibit error-suppression comments"
         entry: python scripts/check_suppression_comments.py
         language: system
         pass_filenames: true
+        types_or: [python, ts, tsx, javascript, jsx, markdown, yaml, toml, json]
+        always_run: false
 
-  # Ruff - フォーマッター & リンター (Python)
-  - repo: local
-    hooks:
-      - id: ruff
-        name: ruff
-        entry: uv run ruff check backend tests
-        language: system
-        types: [python]
-        pass_filenames: false
-        always_run: true
-      - id: ruff-format
-        name: ruff-format
-        entry: uv run ruff format --check backend tests
-        language: system
-        types: [python]
-        pass_filenames: false
-        always_run: true
-
-  # Pyright - 静的型チェック (Python)
-  - repo: local
-    hooks:
-      - id: pyright
-        name: pyright (static type checker)
-        entry: uv run pyright --warnings
-        language: system
-        types: [python]
-        pass_filenames: false
-      - id: mypy
-        name: mypy (static type checker)
-        entry: uv run mypy
-        language: system
-        types: [python]
-        pass_filenames: false
-      - id: pytest
-        name: pytest
-        entry: uv run pytest tests
-        language: system
-        pass_filenames: false
-        always_run: true
-
-  # Frontend Checks (TypeScript, ESLint & Prettier)
-  - repo: local
-    hooks:
-      - id: frontend-tsc
-        name: frontend-tsc (TypeScript type check)
-        entry: npm --prefix frontend run typecheck
-        language: system
-        files: ^frontend/.*\.tsx?$
-        pass_filenames: false
-      - id: frontend-eslint
-        name: frontend-eslint
-        entry: npx --prefix frontend eslint --max-warnings=0
-        language: system
-        files: ^frontend/.*\.(ts|tsx|js|jsx)$
-      - id: frontend-prettier
-        name: frontend-prettier
-        entry: npx --prefix frontend prettier --check
-        language: system
-        files: ^frontend/.*\.(ts|tsx|js|jsx|css|scss|html|json)$
-
-  # 基本的なチェック (行末空白、YAML等)
+  # ===========================================================================
+  # 2. Generic file hygiene (whitespace, line endings, file size, ...)
+  # ===========================================================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        # Markdown uses trailing 2-space for line breaks
+        exclude: \.md$
       - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
       - id: check-yaml
         args: [--unsafe]
       - id: check-toml
@@ -88,18 +85,228 @@ repos:
         exclude: ^frontend/tsconfig.*\.json$
       - id: check-merge-conflict
       - id: check-case-conflict
+      - id: check-symlinks
       - id: detect-private-key
       - id: check-added-large-files
         args: [--maxkb=500]
       - id: check-executables-have-shebangs
       - id: check-shebang-scripts-are-executable
       - id: forbid-new-submodules
-      - id: mixed-line-ending
-        args: [--fix=lf]
+      - id: debug-statements
+      - id: check-builtin-literals
+      - id: check-docstring-first
 
-  # スペルチェック
+  # ===========================================================================
+  # 3. EditorConfig compliance
+  # ===========================================================================
+  - repo: https://github.com/editorconfig-checker/editorconfig-checker
+    rev: v3.2.0
+    hooks:
+      - id: editorconfig-checker
+        alias: ec
+        name: "editorconfig-checker (root .editorconfig compliance)"
+        args: [-config, .editorconfig-checker.json]
+
+  # ===========================================================================
+  # 4. Markdown — markdownlint-cli2 (structure) + Prettier (formatting)
+  # ===========================================================================
+  # markdownlint enforces structural rules (heading hierarchy, list style,
+  # fenced code language, etc.). Prettier reformats whitespace; their overlap
+  # is resolved by disabling conflicting rules in `.markdownlint-cli2.jsonc`.
+  # Version is pinned via the root `package.json` so local & CI always match.
+  - repo: local
+    hooks:
+      - id: markdownlint-cli2
+        name: "markdownlint (structural rules)"
+        entry: npm exec --no -- markdownlint-cli2
+        language: system
+        types: [markdown]
+        pass_filenames: true
+
+  # ===========================================================================
+  # 5. textlint — Japanese prose quality (root-only, via project node_modules)
+  # ===========================================================================
+  - repo: local
+    hooks:
+      - id: textlint
+        name: "textlint (Japanese prose)"
+        entry: npm exec --no -- textlint
+        language: system
+        types: [markdown]
+        pass_filenames: true
+        require_serial: true
+
+  # ===========================================================================
+  # 6. Prettier (root) — Markdown / YAML / JSON / MDX formatting
+  # ===========================================================================
+  # Note: frontend TS/TSX/CSS are formatted by the separate `frontend-prettier`
+  # hook below using `frontend/.prettierrc`. This root-level Prettier handles
+  # project-wide MD/YAML/JSON only (controlled by `.prettierignore`).
+  - repo: local
+    hooks:
+      - id: prettier-root
+        name: "prettier (root, MD/YAML/JSON)"
+        entry: npm exec --no -- prettier --check
+        language: system
+        types_or: [markdown, yaml, json, jsx]
+        pass_filenames: true
+        exclude: ^frontend/.*$
+
+  # ===========================================================================
+  # 7. YAML — yamllint (format & syntax)
+  # ===========================================================================
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+        args: [--strict, -c, .yamllint.yaml]
+
+  # ===========================================================================
+  # 8. GitHub Actions — actionlint (workflow syntax)
+  # ===========================================================================
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.7
+    hooks:
+      - id: actionlint
+        name: "actionlint (GitHub Actions workflow validator)"
+
+  # ===========================================================================
+  # 9. Shell — shellcheck
+  # ===========================================================================
+  # `--severity=style` is the STRICTEST setting: it includes style, info,
+  # warning, AND error. Any deviation blocks the commit. This matches the
+  # project's "誰が書いても一定以上の品質" directive.
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.10.0
+    hooks:
+      - id: shellcheck
+        args: [--external-sources, --severity=style, --rcfile=.shellcheckrc]
+
+  # ===========================================================================
+  # 10. Spelling — codespell
+  # ===========================================================================
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
+    rev: v2.3.0
     hooks:
       - id: codespell
-        exclude: ^(frontend/package-lock\.json|uv\.lock)
+        args: [--ignore-words=.codespellignore, --check-hidden]
+        exclude: |
+          (?x)^(
+              uv\.lock|
+              frontend/package-lock\.json|
+              frontend/yarn\.lock|
+              package-lock\.json|
+              \.git/.*|
+              assets/.*
+          )$
+
+  # ===========================================================================
+  # 11. Secret scanning — gitleaks
+  # ===========================================================================
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+        name: "gitleaks (secret scanner)"
+
+  # ===========================================================================
+  # 12. Python — Ruff (lint + format)
+  # ===========================================================================
+  - repo: local
+    hooks:
+      - id: ruff
+        name: "ruff (Python linter)"
+        entry: uv run ruff check --force-exclude backend tests
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+      - id: ruff-format
+        name: "ruff-format (Python formatter)"
+        entry: uv run ruff format --check --force-exclude backend tests
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
+  # ===========================================================================
+  # 13. Python — type checkers
+  # ===========================================================================
+  - repo: local
+    hooks:
+      - id: pyright
+        name: "pyright (Python type checker)"
+        entry: uv run pyright --warnings
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+      - id: mypy
+        name: "mypy (Python type checker)"
+        entry: uv run mypy
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+
+  # ===========================================================================
+  # 14. Frontend — TypeScript, ESLint, Prettier
+  # ===========================================================================
+  - repo: local
+    hooks:
+      - id: frontend-tsc
+        name: "tsc (frontend type checker)"
+        entry: npm --prefix frontend run typecheck
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        always_run: true
+      - id: frontend-eslint
+        name: "eslint (frontend linter, --max-warnings=0)"
+        entry: npm --prefix frontend run lint:strict
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
+        always_run: true
+      - id: frontend-prettier
+        name: "prettier (frontend, TS/TSX/CSS)"
+        entry: npm --prefix frontend exec --no -- prettier --check
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx|css|scss|html|json)$
+        pass_filenames: true
+
+  # ===========================================================================
+  # 15. Tests — pytest (only on push to avoid slow local commits)
+  # ===========================================================================
+  - repo: local
+    hooks:
+      - id: pytest
+        name: "pytest (backend tests)"
+        entry: uv run pytest tests -v --tb=short
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-push, pre-merge-commit]
+        always_run: true
+
+  # ===========================================================================
+  # 16. Commit message — Conventional Commits enforcement
+  # ===========================================================================
+  # commitlint enforces the full Conventional Commits spec using the project's
+  # `.commitlintrc.json`: type enum (feat/fix/docs/...), type case, subject
+  # length, header length, body formatting, etc. We use a local hook (not the
+  # alessandrojcm/commitlint-pre-commit-hook mirror) because the local hook
+  # reliably loads `.commitlintrc.json` from the project root, whereas the
+  # mirror runs from pre-commit's cache.
+  #
+  # Note: We previously also ran `compilerla/conventional-pre-commit` as a
+  # second guard, but its v4 argparse contract conflicts with how pre-commit
+  # forwards the commit-msg filename, so we rely on commitlint alone.
+  - repo: local
+    hooks:
+      - id: commitlint
+        name: "commitlint (Conventional Commits enforcement)"
+        entry: npm exec --no -- commitlint --edit
+        language: system
+        stages: [commit-msg]
+        always_run: true

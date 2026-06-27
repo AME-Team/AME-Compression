@@ -1,0 +1,140 @@
+{
+  "$schema": "https://raw.githubusercontent.com/DavidAnson/markdownlint/main/schema/markdownlint-cli2-config-schema.json",
+  "comment": [
+    "markdownlint-cli2 unified configuration.",
+    "- `config`: markdownlint rules (formerly in .markdownlint.jsonc).",
+    "- `globs`: positive AND negative (!) patterns for file discovery. node_modules",
+    "  and vendored docs are excluded here so they are never linted.",
+    "See https://github.com/DavidAnson/markdownlint-cli2#configuration for details."
+  ],
+  "config": {
+    "default": true,
+    "noDuplicateH1": true,
+    "noInlineConfig": false,
+    "MD001": true,
+    "MD003": {
+      "style": "atx"
+    },
+    "MD004": {
+      "style": "dash"
+    },
+    "MD005": true,
+    "MD007": {
+      "indent": 2
+    },
+    "MD009": true,
+    "MD010": true,
+    "MD011": true,
+    "MD012": {
+      "maximum": 1
+    },
+    "MD013": false,
+    "MD014": true,
+    "MD018": true,
+    "MD019": true,
+    "MD022": true,
+    "MD023": true,
+    "MD024": {
+      "siblings_only": true
+    },
+    "MD025": {
+      "front_matter_title": ""
+    },
+    "MD026": {
+      "punctuation": ".,;:"
+    },
+    "MD027": true,
+    "MD028": true,
+    "MD029": {
+      "style": "ordered"
+    },
+    "MD030": {
+      "ul": "single",
+      "ol": "single"
+    },
+    "MD031": true,
+    "MD032": true,
+    "MD033": false,
+    "MD034": false,
+    "MD035": {
+      "style": "---"
+    },
+    "MD036": false,
+    "MD037": true,
+    "MD038": true,
+    "MD039": true,
+    "MD040": true,
+    "MD041": false,
+    "MD042": true,
+    "MD043": false,
+    "MD044": {
+      "code_blocks": false,
+      "html_elements": true,
+      "names": [
+        "FFmpeg",
+        "FFprobe",
+        "Electron",
+        "TypeScript",
+        "JavaScript",
+        "Python",
+        "React",
+        "GitHub",
+        "Linux",
+        "macOS",
+        "Windows",
+        "API",
+        "CLI",
+        "SVT-AV1",
+        "AmeCompression"
+      ]
+    },
+    "MD045": true,
+    "MD046": {
+      "style": "fenced"
+    },
+    "MD047": true,
+    "MD048": {
+      "style": "backtick"
+    },
+    "MD049": {
+      "style": "asterisk"
+    },
+    "MD050": {
+      "style": "asterisk"
+    },
+    "MD051": true,
+    "MD052": true,
+    "MD053": true,
+    "MD054": {
+      "autolink": false,
+      "style": "inline"
+    },
+    "MD055": {
+      "style": "leading_and_trailing"
+    },
+    "MD058": true,
+    "MD060": false
+  },
+  "globs": [
+    "**/*.md",
+    "**/*.markdown",
+    "**/*.mdx",
+    "!node_modules/**",
+    "!**/node_modules/**",
+    "!.git/**",
+    "!.venv/**",
+    "!dist/**",
+    "!build/**",
+    "!frontend/dist/**",
+    "!.pyinstaller/**",
+    "!.ruff_cache/**",
+    "!.mypy_cache/**",
+    "!.pytest_cache/**",
+    "!.pyright/**",
+    "!assets/**",
+    "!.antigravitycli/**",
+    "!CHANGELOG.md",
+    "!frontend/yarn.lock",
+    "!uv.lock"
+  ]
+}

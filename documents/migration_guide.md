@@ -1,4 +1,4 @@
-# AME Compression Migration & Release Guide (Issue #50)
+# AmeCompression Migration & Release Guide (Issue #50)
 
 This document outlines the transition from the CustomTkinter-based GUI to the new Electron + React + Flask architecture, along with operational requirements and development setup instructions.
 
@@ -47,8 +47,8 @@ npm run electron:dev
 
 The application requires `ffmpeg` and `ffprobe`. There are two ways to provide these:
 
-1.  **System PATH**: Install FFmpeg globally so it's accessible via the command line.
-2.  **Local `bin/` Directory**: Place the `ffmpeg` and `ffprobe` (or `ffmpeg.exe` and `ffprobe.exe` on Windows) executables in a directory named `bin` at the **root of the project repository**.
+1. **System PATH**: Install FFmpeg globally so it's accessible via the command line.
+2. **Local `bin/` Directory**: Place the `ffmpeg` and `ffprobe` (or `ffmpeg.exe` and `ffprobe.exe` on Windows) executables in a directory named `bin` at the **root of the project repository**.
 
 The backend automatically detects local executables in the `bin/` folder before falling back to the system PATH.
 
@@ -60,10 +60,10 @@ The backend automatically detects local executables in the `bin/` folder before 
 
 ## 🚀 Release Procedure
 
-1.  **Version Update**: Increment the version in `pyproject.toml` and `frontend/package.json`.
-2.  **Build Frontend**: Run `npm run build` in the `frontend` directory.
-3.  **Build Executable**: Use `uv run scripts/build.py` to create the standalone executable.
-4.  **Verification**:
+1. **Version Update**: Increment the version in `pyproject.toml` and `frontend/package.json`.
+2. **Build Frontend**: Run `npm run build` in the `frontend` directory.
+3. **Build Executable**: Use `uv run scripts/build.py` to create the standalone executable.
+4. **Verification**:
     - Run all Python tests: `uv run pytest tests`
     - Verify FFmpeg detection status in the settings view.
     - Perform a test compression flow for both video and audio.

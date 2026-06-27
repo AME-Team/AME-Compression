@@ -1,0 +1,51 @@
+{
+  "$schema": "https://raw.githubusercontent.com/editorconfig-checker/editorconfig-checker/main/pkg/config/config.schema.json",
+  "comment": [
+    "Configuration for editorconfig-checker.",
+    "",
+    "Role of this tool relative to others:",
+    "  - Indentation & line length for code (py/ts/js/css): ALREADY enforced",
+    "    by ruff-format, prettier, eslint. We disable them here to avoid",
+    "    redundant / conflicting opinions (e.g. indentation inside Python",
+    "    docstrings legitimately varies for markdown rendering).",
+    "  - This tool focuses on file-level invariants that code formatters do",
+    "    NOT cover: line endings (LF), final newline, trailing whitespace,",
+    "    and charset (UTF-8). These are the things that break diffs and CI",
+    "    across Windows / macOS / Linux contributors."
+  ],
+  "Verbose": false,
+  "Debug": false,
+  "Ignore": false,
+  "Exclude": [
+    "\\.git/",
+    "\\.venv/",
+    "node_modules/",
+    "frontend/",
+    "\\.ruff_cache/",
+    "\\.mypy_cache/",
+    "\\.pytest_cache/",
+    "\\.pyright/",
+    "dist/",
+    "build/",
+    "\\.pyinstaller/",
+    "assets/",
+    "\\.antigravitycli/",
+    "uv\\.lock",
+    "package-lock\\.json",
+    "LICENSE",
+    "LICENSE_FFMPEG\\.txt",
+    "AmeCompression\\.spec"
+  ],
+  "AllowedEndOfLines": ["LF"],
+  "AllowedCharsets": ["utf-8", "utf-8-bom"],
+  "AllowedIndentCharacters": [" ", "\t"],
+  "Disable": {
+    "EndOfLine": false,
+    "FinalNewline": false,
+    "Indentation": true,
+    "IndentSize": true,
+    "InsertFinalNewline": false,
+    "MaxLineLength": true,
+    "TrimTrailingWhitespace": false
+  }
+}

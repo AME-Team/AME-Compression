@@ -1,0 +1,40 @@
+# =============================================================================
+# textlint — ignore patterns
+# =============================================================================
+# Files that should NOT be proofread by textlint. Patterns are gitignore-style.
+# =============================================================================
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Lockfiles
+package-lock.json
+frontend/package-lock.json
+uv.lock
+
+# Build output
+dist/
+build/
+frontend/dist/
+.pyinstaller/
+
+# Cache directories
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.pyright/
+.textlintcache/
+
+# VCS
+.git/
+
+# Generated artifacts
+CHANGELOG.md
+
+# Frontend (handled by frontend-local tooling; MD/MDX in src are layout docs)
+frontend/src/
+frontend/index.html
+
+# Code-only / generated docs
+AmeCompression.spec
