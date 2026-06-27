@@ -23,8 +23,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # OpenCodeGoのAPI Keyがここに入ります
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
-          GITHUB_ACTION.AUTO_REVIEW: "true"
-          GITHUB_ACTION.HANDLE_SYNCHRONIZE: "true"
+          GITHUB_ACTION_CONFIG.AUTO_REVIEW: true
+          GITHUB_ACTION_CONFIG.HANDLE_SYNCHRONIZE: true
           PR_REVIEW.LANGUAGE: "ja"
           # OpenCodeGo (DeepSeek-V4-Pro) 向けのLLM設定
           CONFIG.MODEL: "openai/deepseek-v4-pro"
@@ -54,8 +54,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
-          GITHUB_ACTION.AUTO_REVIEW: "true"
-          GITHUB_ACTION.HANDLE_SYNCHRONIZE: "true"
+          GITHUB_ACTION_CONFIG.AUTO_REVIEW: true
+          GITHUB_ACTION_CONFIG.HANDLE_SYNCHRONIZE: true
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
           CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
@@ -85,8 +85,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
-          GITHUB_ACTION.AUTO_REVIEW: "true"
-          GITHUB_ACTION.HANDLE_SYNCHRONIZE: "true"
+          GITHUB_ACTION_CONFIG.AUTO_REVIEW: true
+          GITHUB_ACTION_CONFIG.HANDLE_SYNCHRONIZE: true
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
           CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
@@ -117,8 +117,8 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
-          GITHUB_ACTION.AUTO_REVIEW: "true"
-          GITHUB_ACTION.HANDLE_SYNCHRONIZE: "true"
+          GITHUB_ACTION_CONFIG.AUTO_REVIEW: true
+          GITHUB_ACTION_CONFIG.HANDLE_SYNCHRONIZE: true
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
           CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
