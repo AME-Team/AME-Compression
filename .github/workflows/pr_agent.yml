@@ -26,11 +26,12 @@ jobs:
           PR_REVIEW.LANGUAGE: "ja"
           # OpenCodeGo (DeepSeek-V4-Pro) 向けのLLM設定
           CONFIG.MODEL: "openai/deepseek-v4-pro"
+          CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
           OPENAI.API_BASE: "https://api.opencode.ai/v1"
           PR_REVIEW.EXTRA_INSTRUCTIONS: |
             あなたは「シニア・ソフトウェアエンジニア」として、コードの一般的な品質をレビューしてください。
             以下の点に焦点を当てて、具体的かつ建設的なフィードバックを日本語で提供してください：
-            1. バグの可能性、エッジケースでの挙動不審、メモリリーク、リソースの解放漏れがないか。
+            1. バグの可能性、エッジケースでの挙動不審、メモリリーク、リソース of 解放漏れがないか。
             2. コードの可読性、保守性、および設計パターンの適用が適切か（過度な複雑化の回避）。
             3. 効率的なアルゴリズムが使われているか、不要なループや重い処理がないか。
             4. 変数名やメソッド名が、意図を明確に表しているか。
@@ -53,6 +54,7 @@ jobs:
           PR_AGENT.PR_COMMANDS: '["/review"]'
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
+          CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
           OPENAI.API_BASE: "https://api.opencode.ai/v1"
           PR_REVIEW.EXTRA_INSTRUCTIONS: |
             あなたは「ドキュメント・品質管理専門」のレビュアーです。
@@ -81,6 +83,7 @@ jobs:
           PR_AGENT.PR_COMMANDS: '["/review"]'
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
+          CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
           OPENAI.API_BASE: "https://api.opencode.ai/v1"
           PR_REVIEW.EXTRA_INSTRUCTIONS: |
             あなたは「セキュリティ監査専門」のホワイトハッカー・リードレビュアーです。
@@ -110,6 +113,7 @@ jobs:
           PR_AGENT.PR_COMMANDS: '["/review"]'
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
+          CONFIG.CUSTOM_MODEL_MAX_TOKENS: 8192
           OPENAI.API_BASE: "https://api.opencode.ai/v1"
           PR_REVIEW.EXTRA_INSTRUCTIONS: |
             あなたは「開発プロセス・コンプライアンス（規約違反）チェック専門」の厳格なレビュアーです。
