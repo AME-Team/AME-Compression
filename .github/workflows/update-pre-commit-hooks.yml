@@ -35,7 +35,7 @@ jobs:
         continue-on-error: true
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           token: ${{ steps.token.outputs.token || secrets.GITHUB_TOKEN }}
           fetch-depth: 0
