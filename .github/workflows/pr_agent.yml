@@ -23,7 +23,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # OpenCodeGoのAPI Keyがここに入ります
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
-          PR_AGENT.AUTO_REVIEW: "true"
+          GITHUB_ACTION.AUTO_REVIEW: "true"
           GITHUB_ACTION.HANDLE_SYNCHRONIZE: "true"
           PR_REVIEW.LANGUAGE: "ja"
           # OpenCodeGo (DeepSeek-V4-Pro) 向けのLLM設定
@@ -54,7 +54,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
-          PR_AGENT.AUTO_REVIEW: "true"
+          GITHUB_ACTION.AUTO_REVIEW: "true"
           GITHUB_ACTION.HANDLE_SYNCHRONIZE: "true"
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
@@ -85,7 +85,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
-          PR_AGENT.AUTO_REVIEW: "true"
+          GITHUB_ACTION.AUTO_REVIEW: "true"
           GITHUB_ACTION.HANDLE_SYNCHRONIZE: "true"
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
@@ -117,7 +117,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_AGENT.PR_COMMANDS: '["/review"]'
-          PR_AGENT.AUTO_REVIEW: "true"
+          GITHUB_ACTION.AUTO_REVIEW: "true"
           GITHUB_ACTION.HANDLE_SYNCHRONIZE: "true"
           PR_REVIEW.LANGUAGE: "ja"
           CONFIG.MODEL: "openai/deepseek-v4-pro"
