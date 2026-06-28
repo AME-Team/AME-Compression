@@ -679,7 +679,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       qualityResult.recommended_volume_gain !== null
     ) {
       setVolumeMode('db')
-      setVolumeValue(Math.round(qualityResult.recommended_volume_gain))
+      setVolumeValue(Math.round(qualityResult.recommended_volume_gain * 10) / 10)
     }
 
     setQualityResult(null)

@@ -138,6 +138,9 @@ class TestAnalyzeAudioQuality:
         def mock_volume_func(*_args: object, **_kwargs: object) -> dict[str, Any]:
             return {"recommended_gain": -1.5}
 
+        def mock_ffmpeg_func(*_args: object, **_kwargs: object) -> str:
+            return "/dummy/ffmpeg"
+
         def mock_exists(*_args: object, **_kwargs: object) -> bool:
             return True
 
@@ -148,6 +151,10 @@ class TestAnalyzeAudioQuality:
         monkeypatch.setattr(
             "backend.analyzer.analyze_volume_level",
             mock_volume_func,
+        )
+        monkeypatch.setattr(
+            "backend.analyzer.find_ffmpeg",
+            mock_ffmpeg_func,
         )
         monkeypatch.setattr(
             "pathlib.Path.exists",
