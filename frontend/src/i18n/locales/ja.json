@@ -230,7 +230,8 @@
   },
   "notification": {
     "success_body": "{{type}}圧縮が完了しました。",
-    "failed_body": "{{type}}圧縮に失敗しました。"
+    "failed_body": "{{type}}圧縮に失敗しました。",
+    "batch_complete_body": "すべての圧縮処理が完了しました。"
   },
   "profile": {
     "title": "設定プロファイル",

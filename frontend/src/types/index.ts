@@ -50,6 +50,7 @@ export interface QualityAnalysisResult {
   recommended_crf: number
   recommend_denoise: boolean
   denoise_level: number | null
+  recommended_volume_gain?: number | null
   bpp: number
   reason: string
   path?: string

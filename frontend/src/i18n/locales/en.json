@@ -230,7 +230,8 @@
   },
   "notification": {
     "success_body": "{{type}} compression completed successfully.",
-    "failed_body": "{{type}} compression failed."
+    "failed_body": "{{type}} compression failed.",
+    "batch_complete_body": "All compression tasks have completed."
   },
   "profile": {
     "title": "Settings Profile",
