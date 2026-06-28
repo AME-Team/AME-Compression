@@ -47,41 +47,71 @@ async function checkBackendHealth(): Promise<boolean> {
   }
 }
 
-function startFlask(): void {
-  // In production, we might want to use a bundled executable
-  // For now, we assume python is in the path and use the project root
-  const projectRoot = isDev
-    ? path.join(__dirname, '..', '..')
-    : path.join(process.resourcesPath, 'app')
+interface BackendLaunchConfig {
+  command: string
+  args: string[]
+  cwd: string
+}
 
-  let pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
-
+function resolveBackendLaunchConfig(projectRoot: string): BackendLaunchConfig {
   if (isDev) {
+    let pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
     const venvPath = path.join(
       projectRoot,
       '.venv',
       process.platform === 'win32' ? 'Scripts' : 'bin',
       process.platform === 'win32' ? 'python.exe' : 'python',
     )
+
     if (fs.existsSync(venvPath)) {
       pythonCmd = venvPath
     } else {
       console.warn(`Venv not found at ${venvPath}, falling back to system python`)
     }
+
+    return {
+      command: pythonCmd,
+      args: ['-m', 'backend', '--port', API_PORT.toString(), '--config', 'dev'],
+      cwd: projectRoot,
+    }
   }
 
-  const config = isDev ? 'dev' : 'prod'
-
-  console.warn(`Starting Flask with root: ${projectRoot} using ${pythonCmd}`)
-
-  flaskProcess = spawn(
-    pythonCmd,
-    ['-m', 'backend', '--port', API_PORT.toString(), '--config', config],
-    {
-      cwd: projectRoot,
-      env: { ...process.env, PYTHONUNBUFFERED: '1' },
-    },
+  const backendRoot = path.join(process.resourcesPath, 'backend')
+  const backendExecutable = path.join(
+    backendRoot,
+    process.platform === 'win32' ? 'ame-compression-backend.exe' : 'ame-compression-backend',
   )
+
+  if (fs.existsSync(backendExecutable)) {
+    return {
+      command: backendExecutable,
+      args: ['--port', API_PORT.toString(), '--config', 'prod'],
+      cwd: backendRoot,
+    }
+  }
+
+  // Fallback for non-packaged/partial environments.
+  const pythonCmd = process.platform === 'win32' ? 'python' : 'python3'
+  return {
+    command: pythonCmd,
+    args: ['-m', 'backend', '--port', API_PORT.toString(), '--config', 'prod'],
+    cwd: projectRoot,
+  }
+}
+
+function startFlask(): void {
+  const projectRoot = isDev
+    ? path.join(__dirname, '..', '..')
+    : path.join(process.resourcesPath, 'app')
+
+  const launchConfig = resolveBackendLaunchConfig(projectRoot)
+
+  console.warn(`Starting backend with cwd: ${launchConfig.cwd} using ${launchConfig.command}`)
+
+  flaskProcess = spawn(launchConfig.command, launchConfig.args, {
+    cwd: launchConfig.cwd,
+    env: { ...process.env, PYTHONUNBUFFERED: '1' },
+  })
 
   flaskProcess.stdout?.on('data', (data) => {
     console.warn(`Flask: ${data}`)

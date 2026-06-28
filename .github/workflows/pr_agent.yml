@@ -55,7 +55,7 @@ jobs:
           PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
           PR_REVIEWER__REQUIRE_SECURITY_REVIEW: true
           CONFIG__RESPONSE_LANGUAGE: "ja-JP"
-          CONFIG__MODEL: "openai/deepseek-v4-pro"
+          CONFIG__MODEL: "openai/deepseek-v4-flash"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 32768
           OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
           PR_REVIEWER__EXTRA_INSTRUCTIONS: |

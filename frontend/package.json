@@ -7,6 +7,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:release": "npm run build && npm run build:preload",
+    "package:win:raw": "npm run build:release && electron-builder --win nsis 7z --x64",
+    "package:win": "cross-env RELEASE_FLAVOR=standard npm run package:win:raw",
+    "package:win:bundled": "cross-env RELEASE_FLAVOR=ffmpeg-bundled npm run package:win:raw",
+    "package:win:nonbundled": "cross-env RELEASE_FLAVOR=ffmpeg-system npm run package:win:raw",
     "lint": "eslint .",
     "lint:strict": "eslint . --max-warnings=0",
     "format:check": "prettier --check .",
@@ -49,5 +54,38 @@
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.10",
     "wait-on": "^9.0.5"
+  },
+  "build": {
+    "appId": "com.amecompression.app",
+    "productName": "AmeCompression",
+    "artifactName": "${productName}-${version}-${env.RELEASE_FLAVOR}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist/ame-compression-backend",
+        "to": "backend",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "7z"
+      ],
+      "icon": "../assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

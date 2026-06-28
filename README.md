@@ -78,6 +78,27 @@ uv run scripts/build.py
 # バンドルビルド（bin/ 内の FFmpeg バイナリを同梱）
 # 事前に bin/ ディレクトリに ffmpeg / ffprobe の実行ファイルを配置してください
 uv run scripts/build.py --with-ffmpeg
+
+# Windows向け GUI 配布版の作成
+
+# 一括生成（推奨）
+# 生成物:
+# - インストーラー (.exe): FFmpeg同梱版 / 非同梱版
+# - ポータブル (.7z): FFmpeg同梱版 / 非同梱版
+build_release_win.bat
+
+# 手動生成（同梱版）
+uv run scripts/build.py --with-ffmpeg
+cd frontend
+npm run package:win:bundled
+
+# 手動生成（非同梱版）
+cd ..
+uv run scripts/build.py --no-ffmpeg
+cd frontend
+npm run package:win:nonbundled
+
+# 出力先: frontend/release
 ```
 
 ## 🧪 テスト
