@@ -295,7 +295,9 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
   }, [isCompressing, showToast, t])
 
   const handleCancelAll = useCallback((): void => {
-    const activeJobs = jobs.filter((job) => job.status === 'running' || job.status === 'starting')
+    const activeJobs = jobs.filter(
+      (job) => job.status === 'running' || job.status === 'starting' || job.status === 'pending',
+    )
     for (const job of activeJobs) {
       onCancelJob(job.id)
     }

@@ -26,7 +26,7 @@ export const useJobs = (): {
 
       let prevRunningCount = 0
       for (const [_, status] of prevMap.entries()) {
-        if (status === 'running' || status === 'starting') {
+        if (status === 'running' || status === 'starting' || status === 'pending') {
           prevRunningCount++
         }
       }
@@ -36,13 +36,14 @@ export const useJobs = (): {
 
       for (const job of newJobs) {
         newMap.set(job.id, job.status)
-        if (job.status === 'running' || job.status === 'starting') {
+        if (job.status === 'running' || job.status === 'starting' || job.status === 'pending') {
           currentRunningCount++
         }
 
         const prevStatus = prevMap.get(job.id)
         if (prevStatus) {
-          const wasRunning = prevStatus === 'running' || prevStatus === 'starting'
+          const wasRunning =
+            prevStatus === 'running' || prevStatus === 'starting' || prevStatus === 'pending'
           if (wasRunning && (job.status === 'success' || job.status === 'failed')) {
             newlyFinished.push(job)
           }

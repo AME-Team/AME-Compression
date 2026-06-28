@@ -1,4 +1,4 @@
-export type JobStatus = 'starting' | 'running' | 'success' | 'failed'
+export type JobStatus = 'starting' | 'running' | 'success' | 'failed' | 'pending'
 export type JobType = 'video' | 'audio'
 
 export interface Progress {

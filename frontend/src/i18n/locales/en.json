@@ -175,6 +175,7 @@
     "ffmpeg_not_found": "FFmpeg: Not Found",
     "ready": "Ready",
     "processing": "Processing...",
+    "pending": "Pending",
     "starting": "Starting",
     "running": "Running",
     "success": "Complete",

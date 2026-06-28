@@ -224,6 +224,8 @@ def analyze_quality(media_path: str | Path, ffprobe_path: str = "ffprobe") -> di
         - ``metadata``: Extracted video metadata (dict)
     """
     media_path = Path(media_path)
+    if any(char in str(media_path) for char in [";", "&", "|", "`", "$", "\n"]):
+        raise ValueError("Invalid characters in file path")
     if not media_path.exists():
         return {
             "status": "error",
@@ -405,6 +407,8 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
         - ``metadata``: Extracted audio metadata (dict)
     """
     media_path = Path(media_path)
+    if any(char in str(media_path) for char in [";", "&", "|", "`", "$", "\n"]):
+        raise ValueError("Invalid characters in file path")
     if not media_path.exists():
         return {
             "status": "error",
