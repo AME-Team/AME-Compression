@@ -19,7 +19,7 @@ jobs:
       contents: read
     steps:
       - name: Delete Old Review Comments
-        if: github.event.action == 'synchronize'
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -129,14 +129,18 @@ jobs:
           fi
           echo "Job start time: $START_TIME"
 
-          errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] |
-            select(.createdAt >= \"$START_TIME\") |
-            .body
-          " | grep -i -E "failed to generate|failed to review" || true)
+          marker_count=$(gh pr view "$PR_NUMBER" --json comments --jq "
+            [.comments[] | select(.createdAt >= \"$START_TIME\") | .body]
+            | map(select(contains(\"<!-- pr-agent-reviewer: all -->\"))) | length
+          ")
 
-          if [ -n "$errors" ]; then
-            echo "::error::PR Review failed: $errors"
+          if [ "$marker_count" -eq 0 ]; then
+            errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
+              .comments[] |
+              select(.createdAt >= \"$START_TIME\") |
+              .body
+            " | grep -i -E "failed|error|unable" || true)
+            echo "::error::PR Review failed (marker not found). Errors: $errors"
             exit 1
           fi
           echo "PR Review completed successfully."
