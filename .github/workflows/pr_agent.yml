@@ -1,4 +1,4 @@
-name: PR Agent - Multi-Reviewers (OpenCodeGo)
+name: PR Agent - Reviewer (OpenCodeGo)
 
 on:
   pull_request:
@@ -7,10 +7,7 @@ on:
     types: [created]
 
 jobs:
-  # ==========================================
-  # 1. デフォルトのコードレビュアー（通常品質チェック）
-  # ==========================================
-  default_reviewer:
+  reviewer:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' ||
@@ -27,211 +24,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
-          gh api "/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
-            --paginate --jq \
-            '.[] | select(.body | contains("<!-- pr-agent-reviewer: default -->")) | .id' \
-          | while read -r id; do
-            gh api --method DELETE "/repos/${{ github.repository }}/issues/comments/$id"
-          done
-
-      - name: Record Start Time
-        run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_ENV"
-
-      - name: Default Review
-        uses: Codium-ai/pr-agent@main
-        env:
-          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # 自動実行コマンド（[github_app] セクションの pr_commands）
-          GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
-          GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
-          # 各レビュアーのコメントを独立させる（persistent=false で4レビュアーが上書きし合うのを防止）
-          PR_REVIEWER__PERSISTENT_COMMENT: false
-          PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
-          # 日本語化（[config] セクション。ISO 3166-639 ロケール形式）
-          CONFIG__RESPONSE_LANGUAGE: "ja-JP"
-          # OpenCodeGo (DeepSeek-V4-Pro) 向けのLLM設定
-          CONFIG__MODEL: "openai/deepseek-v4-pro"
-          CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
-          # レビュー（/review）の指示とレビュアー識別ヘッダー
-          PR_REVIEWER__EXTRA_INSTRUCTIONS: |
-            【出力フォーマット - 必ず遵守すること】
-            A. レビュー本文の1行目に、必ず以下のHTMLコメント（レビュアー識別マーカー）を出力すること:
-               <!-- pr-agent-reviewer: default -->
-            B. 2行目に、必ず以下の見出しを出力すること:
-               ## 🔍 デフォルト・コードレビュアー によるレビュー
-            C. 以降のすべてのテキスト（見出し・ラベル・説明・指摘事項）を日本語で記述すること。
-               PR-Agent 標準ラベル（"Best practices", "Security issues", "Possible typos", "Performance", "Issue" 等）が
-               出力される場合は、対応する日本語（「ベストプラクティス」「セキュリティ」「タイポの可能性」「パフォーマンス」「指摘事項」等）に
-               翻訳して記述すること。英語のまま残さないこと。
-            D. 指摘事項には、対象ファイル名・行番号・具体的な修正案を必ず含めること。
-
-            ---
-
-            あなたは「シニア・ソフトウェアエンジニア」として、コードの一般的な品質をレビューしてください。
-            以下の点に焦点を当てて、具体的かつ建設的なフィードバックを提供してください:
-            1. バグの可能性、エッジケースでの挙動不審、メモリリーク、リソースの解放漏れがないか。
-            2. コードの可読性、保守性、および設計パターンの適用が適切か（過度な複雑化の回避）。
-            3. 効率的なアルゴリズムが使われているか、不要なループや重い処理がないか。
-            4. 変数名やメソッド名が、意図を明確に表しているか。
-          # コードサジェスチョン（/improve）の指示とレビュアー識別タグ
-          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: |
-            あなたは「🔍 デフォルト・コードレビュアー」としてコードサジェスチョンを生成しています。
-            【出力フォーマット - 必ず遵守すること】
-            1. 各サジェスチョンの説明文の先頭に、必ず以下の識別タグを付けること:
-               【🔍 デフォルトレビュアー】
-            2. サジェスチョンの理由・説明・コード例はすべて日本語で記述すること。
-            3. カテゴリラベル（"Possible bug", "Best practice", "High", "Medium", "Low" 等）も
-               日本語に翻訳すること（例:「不具合の可能性」「ベストプラクティス」「高」「中」「低」）。
-            4. コードの一般的な品質向上（バグ予防・可読性・効率性）に焦点を当てること。
-
-      - name: Check Review Success
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PR_NUMBER=${{ github.event.pull_request.number }}
-          else
-            PR_NUMBER=${{ github.event.issue.number }}
-          fi
-          echo "Job start time: $START_TIME"
-
-          # github-actions[bot]がジョブ開始以降に投稿したコメントをスキャン
-          errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] |
-            select(.createdAt >= \"$START_TIME\") |
-            .body
-          " | grep -i -E "failed to generate|failed to review" || true)
-
-          if [ -n "$errors" ]; then
-            echo "::error::PR Review failed: $errors"
-            exit 1
-          fi
-          echo "PR Review completed successfully."
-
-  # ==========================================
-  # 2. Document専用レビュアー（ドキュメント同期チェック）
-  # ==========================================
-  document_reviewer:
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
-       github.event.comment.user.type != 'Bot')
-    permissions:
-      pull-requests: write
-      issues: write
-      contents: read
-    steps:
-      - name: Delete Old Review Comments
-        if: github.event.action == 'synchronize'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          gh api "/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
-            --paginate --jq \
-            '.[] | select(.body | contains("<!-- pr-agent-reviewer: document -->")) | .id' \
-          | while read -r id; do
-            gh api --method DELETE "/repos/${{ github.repository }}/issues/comments/$id"
-          done
-
-      - name: Record Start Time
-        run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_ENV"
-
-      - name: Document Review
-        uses: Codium-ai/pr-agent@main
-        env:
-          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
-          GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
-          PR_REVIEWER__PERSISTENT_COMMENT: false
-          PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
-          CONFIG__RESPONSE_LANGUAGE: "ja-JP"
-          CONFIG__MODEL: "openai/deepseek-v4-pro"
-          CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
-          PR_REVIEWER__EXTRA_INSTRUCTIONS: |
-            【出力フォーマット - 必ず遵守すること】
-            A. レビュー本文の1行目に、必ず以下のHTMLコメント（レビュアー識別マーカー）を出力すること:
-               <!-- pr-agent-reviewer: document -->
-            B. 2行目に、必ず以下の見出しを出力すること:
-               ## 📚 ドキュメントレビュアー によるレビュー
-            C. 以降のすべてのテキスト（見出し・ラベル・説明・指摘事項）を日本語で記述すること。
-               PR-Agent 標準ラベル（"Best practices", "Security issues", "Possible typos", "Performance", "Issue" 等）が
-               出力される場合は、対応する日本語に翻訳して記述すること。英語のまま残さないこと。
-            D. 指摘事項には、対象ファイル名・行番号・具体的な修正案を必ず含めること。
-
-            ---
-
-            あなたは「ドキュメント・品質管理専門」のレビュアーです。
-            コードの変更内容と、プロジェクト内のドキュメント（README、各種Markdown、設計書等）、およびコード内の公開APIコメント（XMLコメントやDocstring等）の整合性を厳しくチェックしてください。
-            以下の変更がある場合、対応するドキュメントが適切に更新・追加されているか確認してください:
-            1. 新しい機能、コンポーネント、または設定値の追加。
-            2. 既存の仕様や振る舞い（挙動）、インターフェースの変更。
-            3. 依存ライブラリの追加・変更。
-            もし、コードが大きく変わっているにもかかわらず、ドキュメントの更新が漏れている、あるいは古い記述のままである場合は、どのファイルのどの記述を修正すべきか具体的に指摘してください。
-          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: |
-            あなたは「📚 ドキュメントレビュアー」としてコードサジェスチョンを生成しています。
-            【出力フォーマット - 必ず遵守すること】
-            1. 各サジェスチョンの説明文の先頭に、必ず以下の識別タグを付けること:
-               【📚 ドキュメントレビュアー】
-            2. サジェスチョンの理由・説明・コード例はすべて日本語で記述すること。
-            3. カテゴリラベルも日本語に翻訳すること。
-            4. ドキュメント・コメント・型注釈の整合性に焦点を当てること。
-
-      - name: Check Review Success
-        if: always()
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            PR_NUMBER=${{ github.event.pull_request.number }}
-          else
-            PR_NUMBER=${{ github.event.issue.number }}
-          fi
-          echo "Job start time: $START_TIME"
-
-          errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-            .comments[] |
-            select(.createdAt >= \"$START_TIME\") |
-            .body
-          " | grep -i -E "failed to generate|failed to review" || true)
-
-          if [ -n "$errors" ]; then
-            echo "::error::PR Review failed: $errors"
-            exit 1
-          fi
-          echo "PR Review completed successfully."
-
-  # ==========================================
-  # 3. セキュリティ＆コンプライアンスレビュアー（脆弱性・機密情報・規約違反チェック）
-  # ==========================================
-  security_compliance_reviewer:
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
-       github.event.comment.user.type != 'Bot')
-    permissions:
-      pull-requests: write
-      issues: write
-      contents: read
-    steps:
-      - name: Delete Old Review Comments
-        if: github.event.action == 'synchronize'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          for marker in "<!-- pr-agent-reviewer: security-compliance -->" "<!-- pr-agent-reviewer: security -->" "<!-- pr-agent-reviewer: compliance -->"; do
+          for marker in \
+            "<!-- pr-agent-reviewer: all -->" \
+            "<!-- pr-agent-reviewer: default -->" \
+            "<!-- pr-agent-reviewer: document -->" \
+            "<!-- pr-agent-reviewer: security-compliance -->" \
+            "<!-- pr-agent-reviewer: security -->" \
+            "<!-- pr-agent-reviewer: compliance -->"; do
             gh api "/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
               --paginate --jq \
               ".[] | select(.body | contains(\"$marker\")) | .id" \
@@ -243,7 +42,7 @@ jobs:
       - name: Record Start Time
         run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_ENV"
 
-      - name: Security & Compliance Review
+      - name: Review
         uses: Codium-ai/pr-agent@main
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -254,7 +53,6 @@ jobs:
           GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
           PR_REVIEWER__PERSISTENT_COMMENT: false
           PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
-          # セキュリティレビューを有効化
           PR_REVIEWER__REQUIRE_SECURITY_REVIEW: true
           CONFIG__RESPONSE_LANGUAGE: "ja-JP"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
@@ -263,20 +61,38 @@ jobs:
           PR_REVIEWER__EXTRA_INSTRUCTIONS: |
             【出力フォーマット - 必ず遵守すること】
             A. レビュー本文の1行目に、必ず以下のHTMLコメント（レビュアー識別マーカー）を出力すること:
-               <!-- pr-agent-reviewer: security-compliance -->
+               <!-- pr-agent-reviewer: all -->
             B. 2行目に、必ず以下の見出しを出力すること:
-               ## 🔒⚖️ セキュリティ＆コンプライアンスレビュアー によるレビュー
+               ## 🤖 AIコードレビュー
             C. 以降のすべてのテキスト（見出し・ラベル・説明・指摘事項）を日本語で記述すること。
                PR-Agent 標準ラベル（"Best practices", "Security issues", "Possible typos", "Performance", "Issue" 等）が
                出力される場合は、対応する日本語に翻訳して記述すること。英語のまま残さないこと。
             D. 指摘事項には、対象ファイル名・行番号・具体的な修正案を必ず含めること。
+            E. レビュー結果は以下の4つのセクションに分けて出力すること:
+               ### 1. コード品質
+               ### 2. ドキュメント
+               ### 3. セキュリティ
+               ### 4. コンプライアンス
 
             ---
 
-            あなたは「セキュリティ監査」と「開発プロセス・コンプライアンス」の両方を担う厳格なリードレビュアーです。
-            以下の2つの観点でコードを厳しく審査してください。
+            あなたはシニア・ソフトウェアエンジニア兼セキュリティ監査官として、以下の4つの観点でコードを審査してください。
 
-            【セキュリティ監査】
+            【1. コード品質】
+            1. バグの可能性、エッジケースでの挙動不審、メモリリーク、リソースの解放漏れがないか。
+            2. コードの可読性、保守性、および設計パターンの適用が適切か（過度な複雑化の回避）。
+            3. 効率的なアルゴリズムが使われているか、不要なループや重い処理がないか。
+            4. 変数名やメソッド名が、意図を明確に表しているか。
+
+            【2. ドキュメント】
+            コードの変更内容と、プロジェクト内のドキュメント（README、各種Markdown、設計書等）、およびコード内の公開APIコメント（XMLコメントやDocstring等）の整合性をチェックしてください。
+            以下の変更がある場合、対応するドキュメントが適切に更新・追加されているか確認してください:
+            1. 新しい機能、コンポーネント、または設定値の追加。
+            2. 既存の仕様や振る舞い（挙動）、インターフェースの変更。
+            3. 依存ライブラリの追加・変更。
+            ドキュメントの更新が漏れている場合は、どのファイルのどの記述を修正すべきか具体的に指摘してください。
+
+            【3. セキュリティ】
             OWASP Top 10などの主要な脆弱性が混入していないか、コードを厳格に静的解析してください。
             特に以下のリスクを重点的にチェックしてください:
             1. SQLインジェクション、XSS、OSコマンドインジェクションの脆弱性（ユーザー入力をそのまま処理していないか）。
@@ -285,7 +101,7 @@ jobs:
             4. 危険な関数や、脆弱性が報告されている古いライブラリ・メソッドの使用。
             リスクを発見した場合は、その危険性と、具体的な修正案（安全な実装パターン）を提示してください。
 
-            【コンプライアンス監査】
+            【4. コンプライアンス】
             開発者が品質のガイドラインを迂回しようとしていないか、以下の2点を厳しく監査してください:
             1. テストの追加・修正漏れのチェック:
                - ロジック（プロダクションコード）が追加、または変更されているにもかかわらず、対応するテストコード（Unit Test等）が追加・修正されていない場合は、必ずそれを指摘し、テストを書くよう促してください。
@@ -294,13 +110,12 @@ jobs:
                - 例: C#の #pragma warning dis-able、Python の # no-qa、# type: ig-nore、ESLint の /* eslint-dis-able */ など。
                - もしこれらのコメントが追加されているのを発見した場合は、警告を根本から解決せず、コメントで隠蔽した理由（正当な理由があるのか）を開発者に厳しく問いただすよう指摘してください。
           PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: |
-            あなたは「🔒⚖️ セキュリティ＆コンプライアンスレビュアー」としてコードサジェスチョンを生成しています。
+            あなたは「🤖 AIコードレビュアー」としてコードサジェスチョンを生成しています。
             【出力フォーマット - 必ず遵守すること】
-            1. 各サジェスチョンの説明文の先頭に、必ず以下の識別タグを付けること:
-               【🔒⚖️ セキュリティ＆コンプライアンスレビュアー】
-            2. サジェスチョンの理由・説明・コード例はすべて日本語で記述すること。
-            3. カテゴリラベルも日本語に翻訳すること。
-            4. 脆弱性の修正・機密情報の保護・テスト追加・警告無視コメントの除去に焦点を当てること。
+            1. サジェスチョンの理由・説明・コード例はすべて日本語で記述すること。
+            2. カテゴリラベル（"Possible bug", "Best practice", "High", "Medium", "Low" 等）も
+               日本語に翻訳すること（例:「不具合の可能性」「ベストプラクティス」「高」「中」「低」）。
+            3. コード品質・ドキュメント整合性・セキュリティ・コンプライアンスの観点でサジェスチョンを生成すること。
 
       - name: Check Review Success
         if: always()
