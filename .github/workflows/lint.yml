@@ -116,7 +116,7 @@ jobs:
             fi
           elif [ -z "${{ github.event.before }}" ] || \
                [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
-            BASE="origin/${{ github.base_ref || 'main' }}"
+            BASE="origin/${{ github.base_ref || github.event.repository.default_branch || 'main' }}"
             echo "Linting commits since $BASE"
             npx commitlint --from="$BASE" --to=HEAD --verbose
           else

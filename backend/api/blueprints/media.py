@@ -91,8 +91,12 @@ def analyze_settings() -> Response | tuple[Response, int]:
         media_type = detect_media_type(path_obj)
         if media_type == "audio":
             result = analyze_audio_quality(path_obj, ffprobe_path)
-        else:
+        elif media_type == "video":
             result = analyze_quality(path_obj, ffprobe_path)
+        else:
+            return jsonify(
+                {"status": "error", "reason": f"Unsupported media type: {media_type}"}
+            ), 400
         logger.info("Analysis complete for: %s", path)
         return jsonify(result)
     except Exception as e:
