@@ -294,6 +294,15 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
     }
   }, [isCompressing, showToast, t])
 
+  const handleCancelAll = useCallback((): void => {
+    const activeJobs = jobs.filter(
+      (job) => job.status === 'running' || job.status === 'starting' || job.status === 'pending',
+    )
+    for (const job of activeJobs) {
+      onCancelJob(job.id)
+    }
+  }, [jobs, onCancelJob])
+
   const closeProfileModal = useCallback((): void => {
     setProfileModalOpen(false)
   }, [])
@@ -433,8 +442,19 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
             aria-label={t('compress.progress')}
           >
             <div className="modal-header">
-              <h3>{t('compress.progress')}</h3>
-              {!isCompressing && (
+              <h3>
+                {t('compress.progress')}
+                {isCompressing && (
+                  <span className="modal-header-status-compressing">
+                    ({t('compress.compressing')})
+                  </span>
+                )}
+              </h3>
+              {isCompressing ? (
+                <button className="progress-modal-cancel-button" onClick={handleCancelAll}>
+                  {t('compress.cancel')}
+                </button>
+              ) : (
                 <button
                   className="panel-close-button"
                   onClick={closeProgressModal}

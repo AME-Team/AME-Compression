@@ -1975,3 +1975,51 @@ label.disabled-label,
   background: rgba(168, 85, 247, 0.8);
   color: white;
 }
+
+.progress-modal-cancel-button {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+[data-theme='dark'] .progress-modal-cancel-button {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+[data-theme='dark'] .progress-modal-cancel-button:hover {
+  background: rgba(248, 113, 113, 0.2);
+  border-color: #f87171;
+}
+
+[data-theme='dark'] .progress-modal-cancel-button:focus-visible {
+  outline: 2px solid #f87171;
+  outline-offset: 2px;
+}
+
+[data-theme='light'] .progress-modal-cancel-button {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fee2e2;
+}
+
+[data-theme='light'] .progress-modal-cancel-button:hover {
+  background: #fee2e2;
+  border-color: #f87171;
+}
+
+[data-theme='light'] .progress-modal-cancel-button:focus-visible {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+.modal-header-status-compressing {
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: var(--color-primary);
+  opacity: 0.85;
+}

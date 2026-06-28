@@ -1,44 +1,44 @@
-# AmeCompression Frontend
+# AmeCompression フロントエンド (Frontend)
 
-The desktop user interface for AmeCompression, built with Electron, React, and Vite.
+Electron、React、およびViteで構築されたAmeCompressionのデスクトップユーザーインターフェース。
 
-## 🚀 Features
+## 🚀 主な特徴
 
-- **React 19**: Modern UI component architecture.
-- **Electron**: Cross-platform desktop application shell.
-- **Vite**: Ultra-fast development server and build tool.
-- **Tailwind CSS**: Utility-first CSS framework for rapid UI development (if used).
-- **Lucide React**: Beautiful & consistent iconography.
-- **i18next**: Comprehensive internationalization support.
+- **React 19**: モダンなUIコンポーネントアーキテクチャ。
+- **Electron**: クロスプラットフォームに対応したデスクトップアプリケーションシェル。
+- **Vite**: 超高速な開発サーバーおよびビルドツール。
+- **Tailwind CSS**: 迅速なUI開発のためのユーティリティファーストなCSSフレームワーク（使用されている場合）。
+- **Lucide React**: 美しく一貫性のあるアイコンセット。
+- **i18next**: 包括的な国際化（多言語対応）サポート。
 
-## 🛠️ Development
+## 🛠️ 開発方法
 
-### Setup
+### セットアップ
 
 ```bash
-# Install dependencies
+# 依存関係のインストール
 npm install
 ```
 
-### Run in Development Mode
+### 開発モードでの実行
 
-Starts both the Vite dev server and the Electron application with HMR.
+Vite開発サーバーとElectronアプリケーションの両方をホットモジュールリプレースメント (HMR) 有効で起動します。
 
 ```bash
 npm run electron:dev
 ```
 
-### Build
+### ビルド
 
-Compiles the frontend assets and prepares them for production.
+フロントエンドのアセットをコンパイルし、本番環境向けの準備を行います。
 
 ```bash
 npm run build
 ```
 
-## 🏗️ Architecture
+## 🏗️ アーキテクチャ
 
-- `src/`: React source code.
-- `electron/`: Electron main and preload scripts.
-- `public/`: Static assets.
-- `dist/`: Compiled production build (generated after `npm run build`).
+- `src/`: Reactのソースコード。
+- `electron/`: Electronのメインおよびプリロードスクリプト。
+- `public/`: 静的アセット。
+- `dist/`: コンパイルされた本番用ビルド（`npm run build` 実行後に生成）。

@@ -23,26 +23,61 @@ export const useJobs = (): {
 
       const prevMap = prevJobsRef.current
       const newMap = new Map<string, string>()
+
+      let prevRunningCount = 0
+      for (const [_, status] of prevMap.entries()) {
+        if (status === 'running' || status === 'starting' || status === 'pending') {
+          prevRunningCount++
+        }
+      }
+
+      let currentRunningCount = 0
+      const newlyFinished: Job[] = []
+
       for (const job of newJobs) {
         newMap.set(job.id, job.status)
+        if (job.status === 'running' || job.status === 'starting' || job.status === 'pending') {
+          currentRunningCount++
+        }
 
         const prevStatus = prevMap.get(job.id)
-        if (prevStatus && prevStatus !== job.status) {
+        if (prevStatus) {
           const wasRunning =
-            prevStatus === 'running' || prevStatus === 'pending' || prevStatus === 'starting'
-          if (wasRunning && job.status === 'success') {
+            prevStatus === 'running' || prevStatus === 'starting' || prevStatus === 'pending'
+          if (wasRunning && (job.status === 'success' || job.status === 'failed')) {
+            newlyFinished.push(job)
+          }
+        }
+      }
+
+      if (prevRunningCount > 0 && currentRunningCount === 0 && newlyFinished.length > 0) {
+        if (newlyFinished.length === 1 && newlyFinished[0]) {
+          const job = newlyFinished[0]
+          if (job.status === 'success') {
             sendNotification(
               t('compress.complete'),
               t('notification.success_body', { type: t('nav.' + job.type) }),
             )
-          } else if (wasRunning && job.status === 'failed') {
+          } else if (job.status === 'failed') {
             sendNotification(
               t('compress.failed'),
               t('notification.failed_body', { type: t('nav.' + job.type) }),
             )
           }
+        } else {
+          const successCount = newlyFinished.filter((j) => j.status === 'success').length
+          const failedCount = newlyFinished.length - successCount
+          if (failedCount === 0) {
+            sendNotification(t('compress.complete'), t('notification.batch_complete_body'))
+          } else {
+            sendNotification(
+              t('compress.partial_failure'),
+              t('notification.batch_mixed_body', { success: successCount, failed: failedCount }),
+            )
+          }
         }
       }
+
       prevJobsRef.current = newMap
       setJobs(newJobs)
     } catch (error) {

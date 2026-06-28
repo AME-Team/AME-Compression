@@ -29,7 +29,8 @@ from .config import (
     DEFAULT_DENOISE_LEVEL,
     VIDEO_EXTENSIONS,
 )
-from .ffmpeg import get_detailed_media_info
+from .ffmpeg import find_ffmpeg, get_detailed_media_info
+from .volume import analyze_volume_level
 
 logger = logging.getLogger(__name__)
 
@@ -223,12 +224,15 @@ def analyze_quality(media_path: str | Path, ffprobe_path: str = "ffprobe") -> di
         - ``metadata``: Extracted video metadata (dict)
     """
     media_path = Path(media_path)
-    if not media_path.exists():
+    # Note: subprocess calls in volume.py use argument list form (shell=False),
+    # preventing OS command injection. We ensure it is a valid existing file.
+    if not media_path.exists() or not media_path.is_file():
         return {
             "status": "error",
             "recommended_crf": DEFAULT_CRF,
             "recommend_denoise": False,
             "denoise_level": None,
+            "recommended_volume_gain": None,
             "bpp": 0.0,
             "reason": "File not found.",
             "metadata": {},
@@ -241,6 +245,7 @@ def analyze_quality(media_path: str | Path, ffprobe_path: str = "ffprobe") -> di
             "recommended_crf": DEFAULT_CRF,
             "recommend_denoise": False,
             "denoise_level": None,
+            "recommended_volume_gain": None,
             "bpp": 0.0,
             "reason": "Could not extract video metadata.",
             "metadata": {},
@@ -257,6 +262,7 @@ def analyze_quality(media_path: str | Path, ffprobe_path: str = "ffprobe") -> di
             "recommended_crf": DEFAULT_CRF,
             "recommend_denoise": False,
             "denoise_level": None,
+            "recommended_volume_gain": None,
             "bpp": 0.0,
             "reason": "Bitrate information unavailable; using default CRF.",
             "metadata": meta,
@@ -299,11 +305,20 @@ def analyze_quality(media_path: str | Path, ffprobe_path: str = "ffprobe") -> di
             f"avoid further quality degradation."
         )
 
+    recommended_volume_gain = None
+    try:
+        ffmpeg_path = find_ffmpeg()
+        volume_info = analyze_volume_level(media_path, ffmpeg_path)
+        recommended_volume_gain = volume_info.get("recommended_gain")
+    except Exception as e:
+        logger.warning("Volume analysis failed for %s: %s", media_path, e)
+
     return {
         "status": "success",
         "recommended_crf": recommended_crf,
         "recommend_denoise": recommend_denoise,
         "denoise_level": denoise_level,
+        "recommended_volume_gain": recommended_volume_gain,
         "bpp": round(bpp, 4),
         "reason": reason,
         "metadata": meta,
@@ -392,11 +407,18 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
         - ``metadata``: Extracted audio metadata (dict)
     """
     media_path = Path(media_path)
-    if not media_path.exists():
+    # Note: subprocess calls in volume.py use argument list form (shell=False),
+    # preventing OS command injection. We ensure it is a valid existing file.
+    if not media_path.exists() or not media_path.is_file():
         return {
             "status": "error",
             "recommended_bitrate": 192,
             "source_bitrate_kbps": None,
+            "recommended_crf": None,
+            "recommend_denoise": None,
+            "denoise_level": None,
+            "recommended_volume_gain": None,
+            "bpp": None,
             "reason": "File not found.",
             "metadata": {},
         }
@@ -407,6 +429,11 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
             "status": "error",
             "recommended_bitrate": 192,
             "source_bitrate_kbps": None,
+            "recommended_crf": None,
+            "recommend_denoise": None,
+            "denoise_level": None,
+            "recommended_volume_gain": None,
+            "bpp": None,
             "reason": "Could not extract audio metadata.",
             "metadata": {},
         }
@@ -418,6 +445,11 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
             "status": "error",
             "recommended_bitrate": 192,
             "source_bitrate_kbps": None,
+            "recommended_crf": None,
+            "recommend_denoise": None,
+            "denoise_level": None,
+            "recommended_volume_gain": None,
+            "bpp": None,
             "reason": "No audio stream found.",
             "metadata": {},
         }
@@ -425,11 +457,24 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
     meta = _extract_audio_metadata(audio_stream, detailed.get("format", {}), media_path)
     bit_rate = meta.get("bit_rate")
 
+    recommended_volume_gain = None
+    try:
+        ffmpeg_path = find_ffmpeg()
+        volume_info = analyze_volume_level(media_path, ffmpeg_path)
+        recommended_volume_gain = volume_info.get("recommended_gain")
+    except Exception as e:
+        logger.warning("Volume analysis failed for %s: %s", media_path, e)
+
     if bit_rate is None or bit_rate <= 0:
         return {
             "status": "success",
             "recommended_bitrate": 192,
             "source_bitrate_kbps": None,
+            "recommended_crf": None,
+            "recommend_denoise": None,
+            "denoise_level": None,
+            "recommended_volume_gain": recommended_volume_gain,
+            "bpp": None,
             "reason": "Bitrate information unavailable; using default 192 kbps.",
             "metadata": meta,
         }
@@ -454,6 +499,11 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
         "status": "success",
         "recommended_bitrate": recommended,
         "source_bitrate_kbps": source_kbps,
+        "recommended_crf": None,
+        "recommend_denoise": None,
+        "denoise_level": None,
+        "recommended_volume_gain": recommended_volume_gain,
+        "bpp": None,
         "reason": reason,
         "metadata": meta,
     }

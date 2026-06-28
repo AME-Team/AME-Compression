@@ -118,6 +118,7 @@
     "frame": "Frame",
     "complete": "Compression Complete!",
     "failed": "Compression Failed",
+    "partial_failure": "Some Compressions Failed",
     "cancelled": "Compression Cancelled",
     "original_size": "Original Size",
     "compressed_size": "Compressed Size",
@@ -175,6 +176,7 @@
     "ffmpeg_not_found": "FFmpeg: Not Found",
     "ready": "Ready",
     "processing": "Processing...",
+    "pending": "Pending",
     "starting": "Starting",
     "running": "Running",
     "success": "Complete",
@@ -230,7 +232,9 @@
   },
   "notification": {
     "success_body": "{{type}} compression completed successfully.",
-    "failed_body": "{{type}} compression failed."
+    "failed_body": "{{type}} compression failed.",
+    "batch_complete_body": "All compression tasks have completed.",
+    "batch_mixed_body": "{{success}} succeeded, {{failed}} failed."
   },
   "profile": {
     "title": "Settings Profile",

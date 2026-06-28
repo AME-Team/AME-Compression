@@ -554,7 +554,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       if (!isAnalysisActive) return crf
       const analysis = batchAnalysisResults.find((r) => r.path === inputPath)
       if (analysis?.result.status === 'success' && analysis.result.media_type === 'video') {
-        return analysis.result.recommended_crf
+        return analysis.result.recommended_crf ?? crf
       }
       return crf
     }
@@ -564,7 +564,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       const analysis = batchAnalysisResults.find((r) => r.path === inputPath)
       if (analysis?.result.status === 'success' && analysis.result.media_type === 'video') {
         return {
-          enabled: analysis.result.recommend_denoise,
+          enabled: analysis.result.recommend_denoise ?? denoiseEnabled,
           level: analysis.result.denoise_level ?? denoiseLevel,
         }
       }
@@ -635,7 +635,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const handleAnalyzeQuality = async (): Promise<void> => {
     if (inputPaths.length === 0) return
     const firstFile = inputPaths[0]
-    if (!firstFile || detectMediaType(firstFile) !== 'video') return
+    if (!firstFile) return
 
     setAnalyzingQuality(true)
     setQualityResult(null)
@@ -653,13 +653,35 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
 
   const applyQualitySettings = (): void => {
     if (qualityResult?.status !== 'success') return
-    setCrf(qualityResult.recommended_crf)
+    const firstFile = inputPaths[0]
+    if (!firstFile) return
+    const mediaType = detectMediaType(firstFile)
+
+    if (mediaType === 'audio') {
+      if (qualityResult.recommended_bitrate) {
+        setAudioBitrate(qualityResult.recommended_bitrate.toString())
+      }
+    } else {
+      if (qualityResult.recommended_crf !== null) {
+        setCrf(qualityResult.recommended_crf)
+      }
+    }
+
     if (qualityResult.recommend_denoise && qualityResult.denoise_level !== null) {
       setDenoiseEnabled(true)
       setDenoiseLevel(qualityResult.denoise_level)
     } else {
       setDenoiseEnabled(false)
     }
+
+    if (
+      qualityResult.recommended_volume_gain !== undefined &&
+      qualityResult.recommended_volume_gain !== null
+    ) {
+      setVolumeMode('db')
+      setVolumeValue(Math.round(qualityResult.recommended_volume_gain * 10) / 10)
+    }
+
     setQualityResult(null)
   }
 

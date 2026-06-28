@@ -136,7 +136,7 @@ class TestBuildAudioFilter:
     def test_denoise_max(self) -> None:
         result = build_audio_filter(denoise_level=1.0)
         assert result is not None
-        assert "afftdn=nr=97" in result
+        assert "afftdn=nr=97.00" in result
 
 
 class TestValidateDenoiseLevel:

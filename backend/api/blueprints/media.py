@@ -88,7 +88,15 @@ def analyze_settings() -> Response | tuple[Response, int]:
     logger.info("Analyzing optimal settings for: %s", path)
     try:
         _, ffprobe_path = resolve_ffmpeg_paths()
-        result = analyze_quality(path_obj, ffprobe_path)
+        media_type = detect_media_type(path_obj)
+        if media_type == "audio":
+            result = analyze_audio_quality(path_obj, ffprobe_path)
+        elif media_type == "video":
+            result = analyze_quality(path_obj, ffprobe_path)
+        else:
+            return jsonify(
+                {"status": "error", "reason": f"Unsupported media type: {media_type}"}
+            ), 400
         logger.info("Analysis complete for: %s", path)
         return jsonify(result)
     except Exception as e:
@@ -129,6 +137,7 @@ def batch_analyze_settings() -> Response | tuple[Response, int]:
                     "recommended_crf": 25,
                     "recommend_denoise": False,
                     "denoise_level": None,
+                    "recommended_volume_gain": None,
                     "bpp": 0.0,
                     "recommended_bitrate": 192,
                     "reason": "File not found.",
@@ -153,6 +162,7 @@ def batch_analyze_settings() -> Response | tuple[Response, int]:
                     "recommended_crf": 25,
                     "recommend_denoise": False,
                     "denoise_level": None,
+                    "recommended_volume_gain": None,
                     "bpp": 0.0,
                     "recommended_bitrate": 192,
                     "reason": f"Skipped: mode is '{mode}' but file is {file_media_type}.",
@@ -169,10 +179,11 @@ def batch_analyze_settings() -> Response | tuple[Response, int]:
                         "path": file_path,
                         "media_type": "audio",
                         "status": audio_result["status"],
-                        "recommended_crf": 25,
-                        "recommend_denoise": False,
-                        "denoise_level": None,
-                        "bpp": 0.0,
+                        "recommended_crf": audio_result.get("recommended_crf", 25),
+                        "recommend_denoise": audio_result.get("recommend_denoise", False),
+                        "denoise_level": audio_result.get("denoise_level"),
+                        "recommended_volume_gain": audio_result.get("recommended_volume_gain"),
+                        "bpp": audio_result.get("bpp", 0.0),
                         "recommended_bitrate": audio_result["recommended_bitrate"],
                         "reason": audio_result["reason"],
                         "metadata": audio_result["metadata"],
@@ -194,6 +205,7 @@ def batch_analyze_settings() -> Response | tuple[Response, int]:
                     "recommended_crf": 25,
                     "recommend_denoise": False,
                     "denoise_level": None,
+                    "recommended_volume_gain": None,
                     "bpp": 0.0,
                     "recommended_bitrate": 192,
                     "reason": f"Analysis failed: {e}",

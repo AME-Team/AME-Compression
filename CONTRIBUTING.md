@@ -1,56 +1,56 @@
-# Contributing to AmeCompression
+# AmeCompression への貢献方法 (Contributing)
 
-Thank you for your interest in contributing to AmeCompression! This document provides guidelines for contributing to the project.
+AmeCompressionへの貢献に関心を持っていただき、ありがとうございます！このドキュメントでは、プロジェクトに貢献するためのガイドラインを説明します。
 
-## Development Setup
+## 開発環境のセットアップ
 
-### Prerequisites
+### 前提条件
 
-- Python 3.10 or later
-- [uv](https://docs.astral.sh/uv/) package manager
-- FFmpeg (for testing compression features)
+- Python 3.10以降
+- [uv](https://docs.astral.sh/uv/) パッケージマネージャー
+- FFmpeg（圧縮機能のテスト用）
 - Git
 
-### Setup
+### セットアップ
 
 ```bash
-# Clone the repository
+# リポジトリのクローン
 git clone https://github.com/tarminjapan/AmeCompression.git
 cd AmeCompression
 
-# Install dependencies
+# 依存関係のインストール
 uv sync --extra dev
 
-# Install pre-commit hooks (optional but recommended)
+# pre-commit フックのインストール (任意ですが推奨します)
 uv run pre-commit install
 ```
 
-### Project Structure
+### プロジェクト構造
 
 ```text
 AmeCompression/
-├── frontend/               # Electron + React interface
-│   ├── src/                # React source code
-│   ├── electron/           # Electron main/preload scripts
-│   └── package.json        # Frontend dependencies
-├── backend/       # Backend package (engine & API)
+├── frontend/               # Electron + React インターフェース
+│   ├── src/                # React ソースコード
+│   ├── electron/           # Electron メイン/プリロードスクリプト
+│   └── package.json        # フロントエンドの依存関係
+├── backend/                # バックエンドパッケージ (エンジン & API)
 │   ├── api/                # Flask REST API
-│   ├── cli.py              # CLI interface
-│   ├── config.py           # Configuration constants
-│   ├── ffmpeg.py           # FFmpeg detection and media info
-│   ├── video.py            # Video compression
-│   ├── audio.py            # Audio compression
-│   ├── volume.py           # Volume analysis and adjustment
-│   └── utils.py            # Common utility functions
-├── tests/                  # Test files (pytest)
-├── scripts/                # Build and utility scripts
-├── AmeCompression.spec     # PyInstaller spec file
-└── pyproject.toml          # Backend project configuration
+│   ├── cli.py              # CLI インターフェース
+│   ├── config.py           # 設定定数
+│   ├── ffmpeg.py           # FFmpeg の検出とメディア情報
+│   ├── video.py            # 動画圧縮
+│   ├── audio.py            # 音声圧縮
+│   ├── volume.py           # 音量の分析と調整
+│   └── utils.py            # 共通ユーティリティ関数
+├── tests/                  # テストファイル (pytest)
+├── scripts/                # ビルドおよびユーティリティスクリプト
+├── AmeCompression.spec     # PyInstaller スペックファイル
+└── pyproject.toml          # バックエンドプロジェクト設定
 ```
 
-## Development Workflow
+## 開発フロー
 
-### 1. Create a Branch
+### 1. ブランチの作成
 
 ```bash
 git checkout main
@@ -58,97 +58,97 @@ git pull
 git checkout -b feature/your-feature-name
 ```
 
-### 2. Make Changes
+### 2. 変更の実施
 
-- Write clean, readable code following the existing style
-- Follow the coding conventions described below
+- 既存のスタイルに従い、クリーンで読みやすいコードを作成してください。
+- 下記のコーディング規約に従ってください。
 
-### 3. Run Quality Checks
+### 3. 品質チェックの実行
 
-Before committing, run all quality checks:
+コミットする前に、すべての品質チェックを実行してください。
 
 ```bash
-# Backend: Linting
+# バックエンド: 静的解析（リント）
 uv run ruff check backend tests
 
-# Backend: Formatting check
+# バックエンド: フォーマットチェック
 uv run ruff format --check backend tests
 
-# Backend: Type checking
+# バックエンド: 型チェック
 uv run pyright --warnings
 
-# Backend: Tests
+# バックエンド: テストの実行
 uv run pytest tests -v
 
-# Frontend: Linting
+# フロントエンド: 静的解析（リント）
 cd frontend && npm run lint:strict
 
-# Frontend: Formatting check
+# フロントエンド: フォーマットチェック
 cd frontend && npm run format:check
 ```
 
-### 4. Commit and Push
+### 4. コミットとプッシュ
 
 ```bash
 git add .
-git commit -m "Description of your changes"
+git commit -m "変更内容の説明"
 git push -u origin feature/your-feature-name
 ```
 
-### 5. Create a Pull Request
+### 5. プルリクエスト（PR）の作成
 
-- Create a PR targeting the `main` branch
-- Include a clear description of the changes
-- Reference any related issues
+- `main` ブランチを対象としたPRを作成します。
+- 変更点について明確な説明を記載してください。
+- 関連するIssueがある場合は、それを参照してください。
 
-## Coding Conventions
+## コーディング規約 (Coding Conventions)
 
-### Python Style
+### Python スタイル
 
-- Follow [PEP 8](https://peps.python.org/pep-0008/) style guidelines
-- Use `ruff` for linting and formatting
-- Line length: 100 characters max
-- Use double quotes for strings
-- Use type hints for function signatures
+- [PEP 8](https://peps.python.org/pep-0008/) スタイルガイドラインに従ってください。
+- 静的解析とフォーマットには `ruff` を使用してください。
+- 1行の長さは最大100文字です。
+- 文字列にはダブルクォーテーション（`"`）を使用してください。
+- 関数のシグネチャには型ヒントを使用してください。
 
-### Code Quality
+### コード品質
 
-- All code must pass `ruff check` with no warnings/errors
-- All code must pass `ruff format --check`
-- All code must pass `pyright --warnings` (warnings are treated as failures)
-- Frontend code must pass `eslint --max-warnings=0`
-- Frontend code must pass `prettier --check`
-- Do **not** use `# type: ignore`, `# noqa`, or `eslint-disable` to suppress errors. All errors must be fixed properly. Error suppression comments are strictly prohibited.
-- All tests must pass
+- すべてのコードは警告やエラーなしで `ruff check` をパスする必要があります。
+- すべてのコードは `ruff format --check` をパスする必要があります。
+- すべてのコードは `pyright --warnings` をパスする必要があります（警告はエラーとして扱われます）。
+- フロントエンドのコードは `eslint --max-warnings=0` をパスする必要があります。
+- フロントエンドのコードは `prettier --check` をパスする必要があります。
+- エラーを抑制するために `# type: ignore`、`# noqa`、`eslint-disable` などを使用**しないで**ください。すべてのエラーは適切に修正する必要があります。エラー抑制用のコメントは厳しく禁止されています。
+- すべてのテストに合格する必要があります。
 
-### Testing
+### テスト
 
-- Write tests for new functionality
-- Place test files in the `tests/` directory
-- Follow the naming convention: `test_<module_name>.py`
-- Use pytest fixtures from `conftest.py` for shared setup
+- 新しい機能を追加した場合は、テストを記述してください。
+- テストファイルは `tests/` ディレクトリに配置してください。
+- 命名規則 `test_<module_name>.py` に従ってください。
+- 共通のセットアップには、`conftest.py` で定義されているpytestフィクスチャを使用してください。
 
-### Internationalization (i18n)
+### 国際化 (i18n)
 
-- All user-facing strings in the GUI must use the translation system
-- Add new keys to both `en.json` and `ja.json`
-- Use dot-notation keys (e.g., `"settings.title"`)
-- Test that both language files have matching keys
+- GUI内のユーザー向け文字列はすべて翻訳システムを使用する必要があります。
+- 新しいキーは `en.json` と `ja.json` の両方に追加してください。
+- ドット記法（例： `"settings.title"`）を使用してください。
+- 両方の言語ファイルに一致するキーがあることを確認してください。
 
-## Pull Request Guidelines
+## プルリクエストガイドライン
 
-- Keep PRs focused on a single feature or fix
-- Include tests for new functionality
-- Update documentation if applicable
-- Ensure all CI checks pass
-- Be responsive to code review feedback
+- PRは単一の機能追加またはバグ修正に絞ってください。
+- 新しい機能についてはテストを含めてください。
+- 必要に応じてドキュメントを更新してください。
+- すべてのCIチェックが合格していることを確認してください。
+- コードレビューのフィードバックには迅速に対応してください。
 
-## Reporting Issues
+## バグや要望の報告 (Reporting Issues)
 
-- Use GitHub Issues to report bugs or request features
-- Include steps to reproduce for bugs
-- Include your Python version and OS
+- バグの報告や機能の要望にはGitHub Issuesを使用してください。
+- バグ報告の際は、再現手順を含めてください。
+- PythonのバージョンとOSの情報を含めてください。
 
-## License
+## ライセンス
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+貢献することにより、あなたのコードがMITライセンスの下でライセンスされることに同意したとみなされます。

@@ -1,69 +1,69 @@
-# AmeCompression Migration & Release Guide (Issue #50)
+# AmeCompression 移行＆リリースガイド (Issue #50)
 
-This document outlines the transition from the CustomTkinter-based GUI to the new Electron + React + Flask architecture, along with operational requirements and development setup instructions.
+このドキュメントでは、CustomTkinterベースのGUIから新しいElectron + React + Flaskアーキテクチャへの移行について、運用上の要件や開発セットアップ手順を含めて説明します。
 
-## 🏗️ New Architecture Overview
+## 🏗️ 新しいアーキテクチャの概要
 
-The application has migrated from a pure Python GUI (CustomTkinter) to a modern web-based desktop application:
+本アプリケーションは、純粋なPython GUI（CustomTkinter）から、Web技術を用いたモダンなデスクトップアプリケーションへと移行しました。
 
-- **Frontend**: Electron + React (TypeScript) + Vite
-- **Backend**: Flask API (Python)
-- **Communication**: REST API (localhost:5000)
+- **フロントエンド**: Electron + React (TypeScript) + Vite
+- **バックエンド**: Flask API (Python)
+- **通信方式**: REST API (localhost:5000)
 
-This change allows for a more responsive UI, better cross-platform consistency, and a more robust separation of concerns between the media processing logic and the user interface.
+この移行により、UIの応答性が向上し、クロスプラットフォームにおける一貫性が向上しました。また、メディア処理ロジックとユーザーインターフェースの間で、関心の分離がより堅牢に行われています。
 
-## 🛠️ Developer Setup Instructions
+## 🛠️ 開発者向けセットアップ手順
 
-To set up the development environment for the new architecture, follow these steps:
+新しいアーキテクチャの開発環境をセットアップするには、以下の手順に従ってください。
 
-### 1. Python Environment (Backend)
+### 1. Python環境 (バックエンド)
 
-We recommend using `uv` for managing Python dependencies.
+Pythonの依存関係の管理には `uv` を使用することを推奨します。
 
 ```bash
-# Install dependencies
+# 依存関係のインストール
 uv sync --extra dev
 
-# Run the API server manually (optional, Electron starts it automatically)
+# APIサーバーを手動で起動（オプション、Electronが自動で起動します）
 uv run python -m backend --api --port 5000 --config dev
 ```
 
-### 2. Node.js Environment (Frontend)
+### 2. Node.js環境 (フロントエンド)
 
-Ensure you have Node.js (v18+) installed.
+Node.js（v18以降）がインストールされていることを確認してください。
 
 ```bash
-# Go to the frontend directory
+# フロントエンドディレクトリへ移動
 cd frontend
 
-# Install dependencies
+# 依存関係のインストール
 npm install
 
-# Start development mode (Vite + Electron)
+# 開発モードの起動（Vite + Electron）
 npm run electron:dev
 ```
 
-## ⚙️ FFmpeg Placement & Configuration
+## ⚙️ FFmpeg の配置と設定
 
-The application requires `ffmpeg` and `ffprobe`. There are two ways to provide these:
+アプリケーションの動作には `ffmpeg` および `ffprobe` が必要です。これらを提供する方法は2つあります。
 
-1. **System PATH**: Install FFmpeg globally so it's accessible via the command line.
-2. **Local `bin/` Directory**: Place the `ffmpeg` and `ffprobe` (or `ffmpeg.exe` and `ffprobe.exe` on Windows) executables in a directory named `bin` at the **root of the project repository**.
+1. **システム環境変数 PATH**: コマンドラインからアクセスできるように、システム全体にFFmpegをインストールします。
+2. **ローカルの `bin/` ディレクトリ**: **プロジェクトリポジトリのルート**にある `bin` という名前のディレクトリに、`ffmpeg` と `ffprobe`（Windowsの場合は `ffmpeg.exe` と `ffprobe.exe`）の実行ファイルを配置します。
 
-The backend automatically detects local executables in the `bin/` folder before falling back to the system PATH.
+バックエンドは、システムのPATHをフォールバックとして使用する前に、`bin/` フォルダ内のローカル実行ファイルを自動的に検出します。
 
-## ⚠️ Compatibility & Constraints
+## ⚠️ 互換性と制約事項
 
-- **CLI Mode**: The CLI version (`uv run python -m backend <input>`) remains fully compatible and functional.
-- **Port Conflict**: The Flask backend defaults to port `5000`. Ensure this port is not in use by other services (e.g., macOS AirPlay Receiver).
-- **CORS**: The API is configured to only allow requests from the Electron app (`app://.`) and the Vite development server (`http://localhost:5173`).
+- **CLI モード**: CLIバージョン（`uv run python -m backend <input>`）は、引き続き完全な互換性を維持し動作します。
+- **ポートの競合**: Flaskバックエンドはデフォルトでポート `5000` を使用します。このポートが他のサービス（macOSのAirPlayレシーバーなど）によって使用されていないことを確認してください。
+- **CORS**: APIは、Electronアプリ（`app://.`）およびVite開発サーバー（`http://localhost:5173`）からのリクエストのみを許可するように設定されています。
 
-## 🚀 Release Procedure
+## 🚀 リリース手順
 
-1. **Version Update**: Increment the version in `pyproject.toml` and `frontend/package.json`.
-2. **Build Frontend**: Run `npm run build` in the `frontend` directory.
-3. **Build Executable**: Use `uv run scripts/build.py` to create the standalone executable.
-4. **Verification**:
-    - Run all Python tests: `uv run pytest tests`
-    - Verify FFmpeg detection status in the settings view.
-    - Perform a test compression flow for both video and audio.
+1. **バージョン更新**: `pyproject.toml` と `frontend/package.json` のバージョンをインクリメントします。
+2. **フロントエンドのビルド**: `frontend` ディレクトリで `npm run build` を実行します。
+3. **実行ファイルのビルド**: `uv run scripts/build.py` を実行して、スタンドアロンの実行ファイルを作成します。
+4. **動作検証**:
+    - すべてのPythonテストを実行： `uv run pytest tests`。
+    - 設定画面でFFmpegの検出ステータスを確認します。
+    - 動画と音声の両方で、圧縮処理のテストフローを実行します。

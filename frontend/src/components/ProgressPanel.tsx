@@ -13,6 +13,11 @@ const STATUS_CONFIG: Record<
   string,
   { icon: React.ReactNode; labelKey: string; ariaLabelKey: string }
 > = {
+  pending: {
+    icon: <Clock size={12} />,
+    labelKey: 'status.pending',
+    ariaLabelKey: 'status.pending',
+  },
   starting: {
     icon: <Play size={12} />,
     labelKey: 'status.starting',

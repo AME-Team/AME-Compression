@@ -105,16 +105,29 @@ jobs:
 
       - name: Lint commit messages
         run: |
-          RANGE="${{ github.event.before }}..${{ github.event.after }}"
-          if [ "$RANGE" = "0000000000000000000000000000000000000000..0000000000000000000000000000000000000000" ] || \
-             [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
-            # First commit on a branch: lint against the default branch's tip.
-            BASE="origin/${{ github.base_ref || 'main' }}"
+          if [ -n "${{ github.event.pull_request.base.sha }}" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+            if [ "$BASE" = "$HEAD" ]; then
+              npx commitlint --last --verbose
+            else
+              echo "Linting PR commits from $BASE to $HEAD"
+              npx commitlint --from="$BASE" --to="$HEAD" --verbose
+            fi
+          elif [ -z "${{ github.event.before }}" ] || \
+               [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            BASE="origin/${{ github.base_ref || github.event.repository.default_branch || 'main' }}"
             echo "Linting commits since $BASE"
             npx commitlint --from="$BASE" --to=HEAD --verbose
           else
-            echo "Linting commits in range $RANGE"
-            npx commitlint --from="${{ github.event.before }}" --to="${{ github.event.after }}" --verbose
+            BEFORE="${{ github.event.before }}"
+            AFTER="${{ github.event.after }}"
+            if [ "$BEFORE" = "$AFTER" ]; then
+              npx commitlint --last --verbose
+            else
+              echo "Linting commits in range $BEFORE..$AFTER"
+              npx commitlint --from="$BEFORE" --to="$AFTER" --verbose
+            fi
           fi
 
   # ---------------------------------------------------------------------------
