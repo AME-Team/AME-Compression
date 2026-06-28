@@ -224,9 +224,9 @@ def analyze_quality(media_path: str | Path, ffprobe_path: str = "ffprobe") -> di
         - ``metadata``: Extracted video metadata (dict)
     """
     media_path = Path(media_path)
-    if any(char in str(media_path) for char in [";", "&", "|", "`", "$", "\n"]):
-        raise ValueError("Invalid characters in file path")
-    if not media_path.exists():
+    # Note: subprocess calls in volume.py use argument list form (shell=False),
+    # preventing OS command injection. We ensure it is a valid existing file.
+    if not media_path.exists() or not media_path.is_file():
         return {
             "status": "error",
             "recommended_crf": DEFAULT_CRF,
@@ -407,18 +407,18 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
         - ``metadata``: Extracted audio metadata (dict)
     """
     media_path = Path(media_path)
-    if any(char in str(media_path) for char in [";", "&", "|", "`", "$", "\n"]):
-        raise ValueError("Invalid characters in file path")
-    if not media_path.exists():
+    # Note: subprocess calls in volume.py use argument list form (shell=False),
+    # preventing OS command injection. We ensure it is a valid existing file.
+    if not media_path.exists() or not media_path.is_file():
         return {
             "status": "error",
             "recommended_bitrate": 192,
             "source_bitrate_kbps": None,
-            "recommended_crf": 25,
-            "recommend_denoise": False,
+            "recommended_crf": None,
+            "recommend_denoise": None,
             "denoise_level": None,
             "recommended_volume_gain": None,
-            "bpp": 0.0,
+            "bpp": None,
             "reason": "File not found.",
             "metadata": {},
         }
@@ -429,11 +429,11 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
             "status": "error",
             "recommended_bitrate": 192,
             "source_bitrate_kbps": None,
-            "recommended_crf": 25,
-            "recommend_denoise": False,
+            "recommended_crf": None,
+            "recommend_denoise": None,
             "denoise_level": None,
             "recommended_volume_gain": None,
-            "bpp": 0.0,
+            "bpp": None,
             "reason": "Could not extract audio metadata.",
             "metadata": {},
         }
@@ -445,11 +445,11 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
             "status": "error",
             "recommended_bitrate": 192,
             "source_bitrate_kbps": None,
-            "recommended_crf": 25,
-            "recommend_denoise": False,
+            "recommended_crf": None,
+            "recommend_denoise": None,
             "denoise_level": None,
             "recommended_volume_gain": None,
-            "bpp": 0.0,
+            "bpp": None,
             "reason": "No audio stream found.",
             "metadata": {},
         }
@@ -470,11 +470,11 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
             "status": "success",
             "recommended_bitrate": 192,
             "source_bitrate_kbps": None,
-            "recommended_crf": 25,
-            "recommend_denoise": False,
+            "recommended_crf": None,
+            "recommend_denoise": None,
             "denoise_level": None,
             "recommended_volume_gain": recommended_volume_gain,
-            "bpp": 0.0,
+            "bpp": None,
             "reason": "Bitrate information unavailable; using default 192 kbps.",
             "metadata": meta,
         }
@@ -499,11 +499,11 @@ def analyze_audio_quality(media_path: str | Path, ffprobe_path: str = "ffprobe")
         "status": "success",
         "recommended_bitrate": recommended,
         "source_bitrate_kbps": source_kbps,
-        "recommended_crf": 25,
-        "recommend_denoise": False,
+        "recommended_crf": None,
+        "recommend_denoise": None,
         "denoise_level": None,
         "recommended_volume_gain": recommended_volume_gain,
-        "bpp": 0.0,
+        "bpp": None,
         "reason": reason,
         "metadata": meta,
     }

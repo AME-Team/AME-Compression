@@ -554,7 +554,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       if (!isAnalysisActive) return crf
       const analysis = batchAnalysisResults.find((r) => r.path === inputPath)
       if (analysis?.result.status === 'success' && analysis.result.media_type === 'video') {
-        return analysis.result.recommended_crf
+        return analysis.result.recommended_crf ?? crf
       }
       return crf
     }
@@ -564,7 +564,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       const analysis = batchAnalysisResults.find((r) => r.path === inputPath)
       if (analysis?.result.status === 'success' && analysis.result.media_type === 'video') {
         return {
-          enabled: analysis.result.recommend_denoise,
+          enabled: analysis.result.recommend_denoise ?? denoiseEnabled,
           level: analysis.result.denoise_level ?? denoiseLevel,
         }
       }
@@ -662,7 +662,9 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         setAudioBitrate(qualityResult.recommended_bitrate.toString())
       }
     } else {
-      setCrf(qualityResult.recommended_crf)
+      if (qualityResult.recommended_crf !== null) {
+        setCrf(qualityResult.recommended_crf)
+      }
     }
 
     if (qualityResult.recommend_denoise && qualityResult.denoise_level !== null) {

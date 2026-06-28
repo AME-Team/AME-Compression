@@ -1,4 +1,4 @@
-from backend.analyzer import analyze_quality, calculate_bpp
+from backend.analyzer import analyze_audio_quality, analyze_quality, calculate_bpp
 
 
 class TestCalculateBpp:
@@ -53,3 +53,35 @@ class TestAnalyzeQuality:
     def test_denoise_not_recommended_for_error(self) -> None:
         result = analyze_quality("/nonexistent/file.mp4")
         assert result["recommend_denoise"] is False
+
+
+class TestAnalyzeAudioQuality:
+    def test_nonexistent_file(self) -> None:
+        result = analyze_audio_quality("/nonexistent/file.mp3")
+        assert result["status"] == "error"
+
+    def test_returns_expected_keys(self) -> None:
+        result = analyze_audio_quality("/nonexistent/file.mp3")
+        for key in [
+            "status",
+            "recommended_bitrate",
+            "source_bitrate_kbps",
+            "recommended_crf",
+            "recommend_denoise",
+            "denoise_level",
+            "recommended_volume_gain",
+            "bpp",
+            "reason",
+            "metadata",
+        ]:
+            assert key in result
+
+    def test_default_values_for_error(self) -> None:
+        result = analyze_audio_quality("/nonexistent/file.mp3")
+        assert result["recommended_bitrate"] == 192
+        assert result["recommended_crf"] is None
+        assert result["recommend_denoise"] is None
+        assert result["denoise_level"] is None
+        assert result["recommended_volume_gain"] is None
+        assert result["bpp"] is None
+        assert result["metadata"] == {}

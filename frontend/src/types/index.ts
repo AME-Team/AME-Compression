@@ -47,11 +47,11 @@ export type AnalysisMode = 'none' | 'all' | 'video' | 'audio'
 
 export interface QualityAnalysisResult {
   status: 'success' | 'error' | 'skipped'
-  recommended_crf: number
-  recommend_denoise: boolean
+  recommended_crf: number | null
+  recommend_denoise: boolean | null
   denoise_level: number | null
   recommended_volume_gain?: number | null
-  bpp: number
+  bpp: number | null
   reason: string
   path?: string
   media_type?: 'video' | 'audio' | 'unknown'
