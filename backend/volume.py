@@ -168,10 +168,8 @@ def build_audio_filter(
     if denoise_level is not None and denoise_level > 0:
         # Map 0.0-1.0 to noise reduction amount
         # Higher level = more aggressive noise reduction
-        noise_reduction = max(
-            1, int(denoise_level * 97)
-        )  # 1-97 range for afftdn (min value is 0.01)
-        audio_filters.append(f"afftdn=nr={noise_reduction}")
+        noise_reduction = max(0.01, denoise_level * 97)  # 0.01-97 range for afftdn
+        audio_filters.append(f"afftdn=nr={noise_reduction:.2f}")
 
     # Add volume filter if specified
     if volume_gain_db is not None:

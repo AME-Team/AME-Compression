@@ -97,7 +97,7 @@ AmeCompression/
 - **AAC** をビデオ内のオーディオトラックに使用。オーディオ専用ファイルは **libmp3lame** を使用。
 - **音量のノーマライズ**。FFmpegの `volumedetect` を使用した自動ゲイン分析。ターゲット： クリッピング防止付きでスピーチ/会話向けに -16 dB。
 - **ノイズ除去**。設定可能なレベル（0.0〜1.0）の `afftdn` フィルター。
-  UI側の値（0.0〜1.0）は、`nr = max(1, int(denoise_level * 97))` に変換してFFmpegの `nr` パラメータ（1〜97 dB）にマッピングされます（`backend/volume.py:build_audio_filter()` を参照）。
+  UI側の値（0.0〜1.0）は、`nr = max(0.01, denoise_level * 97)` に変換してFFmpegの `nr` パラメータ（0.01〜97 dB）にマッピングされます（`backend/volume.py:build_audio_filter()` を参照）。
   **絶対に** UIの生値をそのまま `nr` として渡さないでください。常にこの変換を適用してください。
 - **解像度スケーリング**。アスペクト比を維持し、エンコード効率のために偶数の寸法を強制します。最大： 4K (3840×2160)。
 
