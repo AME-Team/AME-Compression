@@ -17,7 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request)
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+       github.event.comment.user.type != 'Bot')
     permissions:
       pull-requests: write
       issues: write
@@ -92,7 +93,6 @@ jobs:
           # github-actions[bot]がジョブ開始以降に投稿したコメントをスキャン
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
             .comments[] |
-            select(.author.login | contains(\"github-actions\")) |
             select(.createdAt >= \"$START_TIME\") |
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
@@ -110,7 +110,8 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request)
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+       github.event.comment.user.type != 'Bot')
     permissions:
       pull-requests: write
       issues: write
@@ -177,7 +178,6 @@ jobs:
 
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
             .comments[] |
-            select(.author.login | contains(\"github-actions\")) |
             select(.createdAt >= \"$START_TIME\") |
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
@@ -195,7 +195,8 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request)
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+       github.event.comment.user.type != 'Bot')
     permissions:
       pull-requests: write
       issues: write
@@ -265,7 +266,6 @@ jobs:
 
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
             .comments[] |
-            select(.author.login | contains(\"github-actions\")) |
             select(.createdAt >= \"$START_TIME\") |
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
@@ -283,7 +283,8 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' ||
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request)
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+       github.event.comment.user.type != 'Bot')
     permissions:
       pull-requests: write
       issues: write
@@ -353,7 +354,6 @@ jobs:
 
           errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
             .comments[] |
-            select(.author.login | contains(\"github-actions\")) |
             select(.createdAt >= \"$START_TIME\") |
             .body
           " | grep -i -E "failed to generate|failed to review" || true)
