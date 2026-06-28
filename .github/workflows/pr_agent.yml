@@ -2,9 +2,12 @@ name: PR Agent - Multi-Reviewers (OpenCodeGo)
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review, synchronize]
+    types: [opened, reopened, ready_for_review]
   issue_comment:
     types: [created]
+# 注意: synchronize（プッシュ時の自動再レビュー）は意図的に除外しています。
+# 4レビュアーが並列実行されるため、プッシュのたびにコメントが増殖するのを防ぐためです。
+# 再レビューが必要な場合は、PRに /review または /improve とコメントしてください。
 
 jobs:
   # ==========================================
@@ -26,26 +29,53 @@ jobs:
       - name: Default Review
         uses: Codium-ai/pr-agent@main
         env:
-          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}  # PR-Agentが期待する本来のキー名
+          OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_AGENT__PR_COMMANDS: '["/review"]'
+          # 自動実行コマンド（[github_app] セクションの pr_commands）
+          GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__HANDLE_SYNCHRONIZE: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
-          PR_REVIEW__LANGUAGE: "ja"
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review"]'
+          # 各レビュアーのコメントを独立させる（persistent=false で4レビュアーが上書きし合うのを防止）
+          PR_REVIEWER__PERSISTENT_COMMENT: false
+          PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
+          # 日本語化（[config] セクション。ISO 3166-639 ロケール形式）
+          CONFIG__RESPONSE_LANGUAGE: "ja-JP"
           # OpenCodeGo (DeepSeek-V4-Pro) 向けのLLM設定
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          CONFIG__RESPONSE_LANGUAGE: "ja"
           OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
-          PR_REVIEW__EXTRA_INSTRUCTIONS: |
+          # レビュー（/review）の指示とレビュアー識別ヘッダー
+          PR_REVIEWER__EXTRA_INSTRUCTIONS: |
+            【出力フォーマット - 必ず遵守すること】
+            A. レビュー本文の1行目に、必ず以下のHTMLコメント（レビュアー識別マーカー）を出力すること:
+               <!-- pr-agent-reviewer: default -->
+            B. 2行目に、必ず以下の見出しを出力すること:
+               ## 🔍 デフォルト・コードレビュアー によるレビュー
+            C. 以降のすべてのテキスト（見出し・ラベル・説明・指摘事項）を日本語で記述すること。
+               PR-Agent 標準ラベル（"Best practices", "Security issues", "Possible typos", "Performance", "Issue" 等）が
+               出力される場合は、対応する日本語（「ベストプラクティス」「セキュリティ」「タイポの可能性」「パフォーマンス」「指摘事項」等）に
+               翻訳して記述すること。英語のまま残さないこと。
+            D. 指摘事項には、対象ファイル名・行番号・具体的な修正案を必ず含めること。
+
+            ---
+
             あなたは「シニア・ソフトウェアエンジニア」として、コードの一般的な品質をレビューしてください。
-            以下の点に焦点を当てて、具体的かつ建設的なフィードバックを日本語で提供してください：
+            以下の点に焦点を当てて、具体的かつ建設的なフィードバックを提供してください:
             1. バグの可能性、エッジケースでの挙動不審、メモリリーク、リソースの解放漏れがないか。
             2. コードの可読性、保守性、および設計パターンの適用が適切か（過度な複雑化の回避）。
             3. 効率的なアルゴリズムが使われているか、不要なループや重い処理がないか。
             4. 変数名やメソッド名が、意図を明確に表しているか。
+          # コードサジェスチョン（/improve）の指示とレビュアー識別タグ
+          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: |
+            あなたは「🔍 デフォルト・コードレビュアー」としてコードサジェスチョンを生成しています。
+            【出力フォーマット - 必ず遵守すること】
+            1. 各サジェスチョンの説明文の先頭に、必ず以下の識別タグを付けること:
+               【🔍 デフォルトレビュアー】
+            2. サジェスチョンの理由・説明・コード例はすべて日本語で記述すること。
+            3. カテゴリラベル（"Possible bug", "Best practice", "High", "Medium", "Low" 等）も
+               日本語に翻訳すること（例:「不具合の可能性」「ベストプラクティス」「高」「中」「低」）。
+            4. コードの一般的な品質向上（バグ予防・可読性・効率性）に焦点を当てること。
 
       - name: Check Review Success
         if: always()
@@ -95,23 +125,43 @@ jobs:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_AGENT__PR_COMMANDS: '["/review"]'
+          GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__HANDLE_SYNCHRONIZE: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
-          PR_REVIEW__LANGUAGE: "ja"
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review"]'
+          PR_REVIEWER__PERSISTENT_COMMENT: false
+          PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
+          CONFIG__RESPONSE_LANGUAGE: "ja-JP"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          CONFIG__RESPONSE_LANGUAGE: "ja"
           OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
-          PR_REVIEW__EXTRA_INSTRUCTIONS: |
+          PR_REVIEWER__EXTRA_INSTRUCTIONS: |
+            【出力フォーマット - 必ず遵守すること】
+            A. レビュー本文の1行目に、必ず以下のHTMLコメント（レビュアー識別マーカー）を出力すること:
+               <!-- pr-agent-reviewer: document -->
+            B. 2行目に、必ず以下の見出しを出力すること:
+               ## 📚 ドキュメントレビュアー によるレビュー
+            C. 以降のすべてのテキスト（見出し・ラベル・説明・指摘事項）を日本語で記述すること。
+               PR-Agent 標準ラベル（"Best practices", "Security issues", "Possible typos", "Performance", "Issue" 等）が
+               出力される場合は、対応する日本語に翻訳して記述すること。英語のまま残さないこと。
+            D. 指摘事項には、対象ファイル名・行番号・具体的な修正案を必ず含めること。
+
+            ---
+
             あなたは「ドキュメント・品質管理専門」のレビュアーです。
             コードの変更内容と、プロジェクト内のドキュメント（README、各種Markdown、設計書等）、およびコード内の公開APIコメント（XMLコメントやDocstring等）の整合性を厳しくチェックしてください。
-            以下の変更がある場合、対応するドキュメントが適切に更新・追加されているか確認してください：
+            以下の変更がある場合、対応するドキュメントが適切に更新・追加されているか確認してください:
             1. 新しい機能、コンポーネント、または設定値の追加。
             2. 既存の仕様や振る舞い（挙動）、インターフェースの変更。
             3. 依存ライブラリの追加・変更。
             もし、コードが大きく変わっているにもかかわらず、ドキュメントの更新が漏れている、あるいは古い記述のままである場合は、どのファイルのどの記述を修正すべきか具体的に指摘してください。
+          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: |
+            あなたは「📚 ドキュメントレビュアー」としてコードサジェスチョンを生成しています。
+            【出力フォーマット - 必ず遵守すること】
+            1. 各サジェスチョンの説明文の先頭に、必ず以下の識別タグを付けること:
+               【📚 ドキュメントレビュアー】
+            2. サジェスチョンの理由・説明・コード例はすべて日本語で記述すること。
+            3. カテゴリラベルも日本語に翻訳すること。
+            4. ドキュメント・コメント・型注釈の整合性に焦点を当てること。
 
       - name: Check Review Success
         if: always()
@@ -160,24 +210,46 @@ jobs:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_AGENT__PR_COMMANDS: '["/review"]'
+          GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__HANDLE_SYNCHRONIZE: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
-          PR_REVIEW__LANGUAGE: "ja"
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review"]'
+          PR_REVIEWER__PERSISTENT_COMMENT: false
+          PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
+          # セキュリティレビューを有効化
+          PR_REVIEWER__REQUIRE_SECURITY_REVIEW: true
+          CONFIG__RESPONSE_LANGUAGE: "ja-JP"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          CONFIG__RESPONSE_LANGUAGE: "ja"
           OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
-          PR_REVIEW__EXTRA_INSTRUCTIONS: |
+          PR_REVIEWER__EXTRA_INSTRUCTIONS: |
+            【出力フォーマット - 必ず遵守すること】
+            A. レビュー本文の1行目に、必ず以下のHTMLコメント（レビュアー識別マーカー）を出力すること:
+               <!-- pr-agent-reviewer: security -->
+            B. 2行目に、必ず以下の見出しを出力すること:
+               ## 🔒 セキュリティレビュアー によるレビュー
+            C. 以降のすべてのテキスト（見出し・ラベル・説明・指摘事項）を日本語で記述すること。
+               PR-Agent 標準ラベル（"Best practices", "Security issues", "Possible typos", "Performance", "Issue" 等）が
+               出力される場合は、対応する日本語に翻訳して記述すること。英語のまま残さないこと。
+            D. 指摘事項には、対象ファイル名・行番号・具体的な修正案を必ず含めること。
+
+            ---
+
             あなたは「セキュリティ監査専門」のホワイトハッカー・リードレビュアーです。
             OWASP Top 10などの主要な脆弱性が混入していないか、コードを厳格に静的解析してください。
-            特に以下のリスクを重点的にチェックしてください：
+            特に以下のリスクを重点的にチェックしてください:
             1. SQLインジェクション、XSS、OSコマンドインジェクションの脆弱性（ユーザー入力をそのまま処理していないか）。
             2. パスワード、APIキー、トークン、秘密鍵などの機密情報（Credentials）のハードコーディング。
             3. 不適切な認証・認可制御、パス・トラバーサル（ディレクトリ遡り）のリスク。
             4. 危険な関数や、脆弱性が報告されている古いライブラリ・メソッドの使用。
-            リスクを発見した場合は、その危険性と、具体的な修正案（安全な実装パターン）を日本語で提示してください。
+            リスクを発見した場合は、その危険性と、具体的な修正案（安全な実装パターン）を提示してください。
+          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: |
+            あなたは「🔒 セキュリティレビュアー」としてコードサジェスチョンを生成しています。
+            【出力フォーマット - 必ず遵守すること】
+            1. 各サジェスチョンの説明文の先頭に、必ず以下の識別タグを付けること:
+               【🔒 セキュリティレビュアー】
+            2. サジェスチョンの理由・説明・コード例はすべて日本語で記述すること。
+            3. カテゴリラベルも日本語に翻訳すること。
+            4. 脆弱性の修正・機密情報の保護・安全な入力検証に焦点を当てること。
 
       - name: Check Review Success
         if: always()
@@ -226,26 +298,46 @@ jobs:
           OPENAI_KEY: ${{ secrets.OPENAI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_AGENT__PR_COMMANDS: '["/review"]'
+          GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__HANDLE_SYNCHRONIZE: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
-          PR_REVIEW__LANGUAGE: "ja"
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review"]'
+          PR_REVIEWER__PERSISTENT_COMMENT: false
+          PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
+          CONFIG__RESPONSE_LANGUAGE: "ja-JP"
           CONFIG__MODEL: "openai/deepseek-v4-pro"
           CONFIG__CUSTOM_MODEL_MAX_TOKENS: 8192
-          CONFIG__RESPONSE_LANGUAGE: "ja"
           OPENAI__API_BASE: "https://opencode.ai/zen/go/v1"
-          PR_REVIEW__EXTRA_INSTRUCTIONS: |
-            あなたは「開発プロセス・コンプライアンス（規約違反）チェック専門」の厳格なレビュアーです。
-            開発者が品質のガイドラインを迂回しようとしていないか、以下の2点を厳しく監査してください：
+          PR_REVIEWER__EXTRA_INSTRUCTIONS: |
+            【出力フォーマット - 必ず遵守すること】
+            A. レビュー本文の1行目に、必ず以下のHTMLコメント（レビュアー識別マーカー）を出力すること:
+               <!-- pr-agent-reviewer: compliance -->
+            B. 2行目に、必ず以下の見出しを出力すること:
+               ## ⚖️ コンプライアンスレビュアー によるレビュー
+            C. 以降のすべてのテキスト（見出し・ラベル・説明・指摘事項）を日本語で記述すること。
+               PR-Agent 標準ラベル（"Best practices", "Security issues", "Possible typos", "Performance", "Issue" 等）が
+               出力される場合は、対応する日本語に翻訳して記述すること。英語のまま残さないこと。
+            D. 指摘事項には、対象ファイル名・行番号・具体的な修正案を必ず含めること。
 
-            1. テストの追加・修正漏れのチェック：
+            ---
+
+            あなたは「開発プロセス・コンプライアンス（規約違反）チェック専門」の厳格なレビュアーです。
+            開発者が品質のガイドラインを迂回しようとしていないか、以下の2点を厳しく監査してください:
+
+            1. テストの追加・修正漏れのチェック:
                - ロジック（プロダクションコード）が追加、または変更されているにもかかわらず、対応するテストコード（Unit Test等）が追加・修正されていない場合は、必ずそれを指摘し、テストを書くよう促してください。
 
-            2. 静的解析無視コメント（警告の握りつぶし）の検知：
+            2. 静的解析無視コメント（警告の握りつぶし）の検知:
                - Linterや静的解析ツールの警告を強引に黙らせるための「警告無視コメント」が不適切に挿入されていないか確認してください。
-               - 例: 言語やツールに応じた無視コメント（C#の #pragma warning dis-able, Python of # no-qa, # type: ig-nore, ESLint of /* eslint-dis-able */ など）。
+               - 例: C#の #pragma warning dis-able、Python の # no-qa、# type: ig-nore、ESLint の /* eslint-dis-able */ など。
                - もしこれらのコメントが追加されているのを発見した場合は、警告を根本から解決せず、コメントで隠蔽した理由（正当な理由があるのか）を開発者に厳しく問いただすよう指摘してください。
+          PR_CODE_SUGGESTIONS__EXTRA_INSTRUCTIONS: |
+            あなたは「⚖️ コンプライアンスレビュアー」としてコードサジェスチョンを生成しています。
+            【出力フォーマット - 必ず遵守すること】
+            1. 各サジェスチョンの説明文の先頭に、必ず以下の識別タグを付けること:
+               【⚖️ コンプライアンスレビュアー】
+            2. サジェスチョンの理由・説明・コード例はすべて日本語で記述すること。
+            3. カテゴリラベルも日本語に翻訳すること。
+            4. テスト追加の提案・警告無視コメントの除去・規約遵守に焦点を当てること。
 
       - name: Check Review Success
         if: always()
