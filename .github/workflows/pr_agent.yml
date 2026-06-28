@@ -2,12 +2,9 @@ name: PR Agent - Multi-Reviewers (OpenCodeGo)
 
 on:
   pull_request:
-    types: [opened, reopened, ready_for_review]
+    types: [opened, reopened, ready_for_review, synchronize]
   issue_comment:
     types: [created]
-# 注意: synchronize（プッシュ時の自動再レビュー）は意図的に除外しています。
-# 4レビュアーが並列実行されるため、プッシュのたびにコメントが増殖するのを防ぐためです。
-# 再レビューが必要な場合は、PRに /review または /improve とコメントしてください。
 
 jobs:
   # ==========================================
@@ -24,6 +21,19 @@ jobs:
       issues: write
       contents: read
     steps:
+      - name: Delete Old Review Comments
+        if: github.event.action == 'synchronize'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          gh api "/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --paginate --jq \
+            '.[] | select(.body | contains("<!-- pr-agent-reviewer: default -->")) | .id' \
+          | while read -r id; do
+            gh api --method DELETE "/repos/${{ github.repository }}/issues/comments/$id"
+          done
+
       - name: Record Start Time
         run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_ENV"
 
@@ -36,7 +46,7 @@ jobs:
           # 自動実行コマンド（[github_app] セクションの pr_commands）
           GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review"]'
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
           # 各レビュアーのコメントを独立させる（persistent=false で4レビュアーが上書きし合うのを防止）
           PR_REVIEWER__PERSISTENT_COMMENT: false
           PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
@@ -117,6 +127,19 @@ jobs:
       issues: write
       contents: read
     steps:
+      - name: Delete Old Review Comments
+        if: github.event.action == 'synchronize'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          gh api "/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --paginate --jq \
+            '.[] | select(.body | contains("<!-- pr-agent-reviewer: document -->")) | .id' \
+          | while read -r id; do
+            gh api --method DELETE "/repos/${{ github.repository }}/issues/comments/$id"
+          done
+
       - name: Record Start Time
         run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_ENV"
 
@@ -128,7 +151,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review"]'
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
           PR_REVIEWER__PERSISTENT_COMMENT: false
           PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
           CONFIG__RESPONSE_LANGUAGE: "ja-JP"
@@ -202,6 +225,19 @@ jobs:
       issues: write
       contents: read
     steps:
+      - name: Delete Old Review Comments
+        if: github.event.action == 'synchronize'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          gh api "/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --paginate --jq \
+            '.[] | select(.body | contains("<!-- pr-agent-reviewer: security -->")) | .id' \
+          | while read -r id; do
+            gh api --method DELETE "/repos/${{ github.repository }}/issues/comments/$id"
+          done
+
       - name: Record Start Time
         run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_ENV"
 
@@ -213,7 +249,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review"]'
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
           PR_REVIEWER__PERSISTENT_COMMENT: false
           PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
           # セキュリティレビューを有効化
@@ -290,6 +326,19 @@ jobs:
       issues: write
       contents: read
     steps:
+      - name: Delete Old Review Comments
+        if: github.event.action == 'synchronize'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          gh api "/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --paginate --jq \
+            '.[] | select(.body | contains("<!-- pr-agent-reviewer: compliance -->")) | .id' \
+          | while read -r id; do
+            gh api --method DELETE "/repos/${{ github.repository }}/issues/comments/$id"
+          done
+
       - name: Record Start Time
         run: echo "START_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> "$GITHUB_ENV"
 
@@ -301,7 +350,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_APP__PR_COMMANDS: '["/review", "/improve"]'
           GITHUB_ACTION_CONFIG__AUTO_REVIEW: true
-          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review"]'
+          GITHUB_ACTION_CONFIG__PR_ACTIONS: '["opened", "reopened", "ready_for_review", "synchronize"]'
           PR_REVIEWER__PERSISTENT_COMMENT: false
           PR_CODE_SUGGESTIONS__PERSISTENT_COMMENT: false
           CONFIG__RESPONSE_LANGUAGE: "ja-JP"
