@@ -65,11 +65,16 @@ export const useJobs = (): {
             )
           }
         } else {
-          const allSuccess = newlyFinished.every((j) => j.status === 'success')
-          sendNotification(
-            allSuccess ? t('compress.complete') : t('compress.failed'),
-            t('notification.batch_complete_body'),
-          )
+          const successCount = newlyFinished.filter((j) => j.status === 'success').length
+          const failedCount = newlyFinished.length - successCount
+          if (failedCount === 0) {
+            sendNotification(t('compress.complete'), t('notification.batch_complete_body'))
+          } else {
+            sendNotification(
+              t('compress.partial_failure'),
+              t('notification.batch_mixed_body', { success: successCount, failed: failedCount }),
+            )
+          }
         }
       }
 

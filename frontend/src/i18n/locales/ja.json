@@ -118,6 +118,7 @@
     "frame": "フレーム",
     "complete": "圧縮完了！",
     "failed": "圧縮失敗",
+    "partial_failure": "一部の圧縮が失敗しました",
     "cancelled": "圧縮がキャンセルされました",
     "original_size": "元のサイズ",
     "compressed_size": "圧縮後のサイズ",
@@ -232,7 +233,8 @@
   "notification": {
     "success_body": "{{type}}圧縮が完了しました。",
     "failed_body": "{{type}}圧縮に失敗しました。",
-    "batch_complete_body": "すべての圧縮処理が完了しました。"
+    "batch_complete_body": "すべての圧縮処理が完了しました。",
+    "batch_mixed_body": "{{success}} 件成功、{{failed}} 件失敗しました。"
   },
   "profile": {
     "title": "設定プロファイル",

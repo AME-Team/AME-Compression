@@ -118,6 +118,7 @@
     "frame": "Frame",
     "complete": "Compression Complete!",
     "failed": "Compression Failed",
+    "partial_failure": "Some Compressions Failed",
     "cancelled": "Compression Cancelled",
     "original_size": "Original Size",
     "compressed_size": "Compressed Size",
@@ -232,7 +233,8 @@
   "notification": {
     "success_body": "{{type}} compression completed successfully.",
     "failed_body": "{{type}} compression failed.",
-    "batch_complete_body": "All compression tasks have completed."
+    "batch_complete_body": "All compression tasks have completed.",
+    "batch_mixed_body": "{{success}} succeeded, {{failed}} failed."
   },
   "profile": {
     "title": "Settings Profile",
