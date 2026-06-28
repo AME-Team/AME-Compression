@@ -70,10 +70,18 @@ class TestAnalyzeQuality:
         def mock_extract(*_args: object, **_kwargs: object) -> dict[str, Any]:
             return mock_meta
 
+        def mock_volume_func(*_args: object, **_kwargs: object) -> dict[str, Any]:
+            return {"recommended_gain": -1.5}
+
+        def mock_ffmpeg_func(*_args: object, **_kwargs: object) -> str:
+            return "/dummy/ffmpeg"
+
         def mock_exists(*_args: object, **_kwargs: object) -> bool:
             return True
 
         monkeypatch.setattr("backend.analyzer._extract_video_metadata", mock_extract)
+        monkeypatch.setattr("backend.analyzer.analyze_volume_level", mock_volume_func)
+        monkeypatch.setattr("backend.analyzer.find_ffmpeg", mock_ffmpeg_func)
         monkeypatch.setattr("pathlib.Path.exists", mock_exists)
         monkeypatch.setattr("pathlib.Path.is_file", mock_exists)
 
