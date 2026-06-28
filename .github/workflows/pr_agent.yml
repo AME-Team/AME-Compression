@@ -133,14 +133,10 @@ jobs:
             [.comments[] | select(.createdAt >= \"$START_TIME\") | .body]
             | map(select(contains(\"<!-- pr-agent-reviewer: all -->\"))) | length
           ")
+          marker_count="${marker_count:-0}"
 
           if [ "$marker_count" -eq 0 ]; then
-            errors=$(gh pr view "$PR_NUMBER" --json comments --jq "
-              .comments[] |
-              select(.createdAt >= \"$START_TIME\") |
-              .body
-            " | grep -i -E "failed|error|unable" || true)
-            echo "::error::PR Review failed (marker not found). Errors: $errors"
+            echo "::error::PR Review failed (marker not found)."
             exit 1
           fi
           echo "PR Review completed successfully."
