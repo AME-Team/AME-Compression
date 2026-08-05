@@ -6,6 +6,10 @@ on:
 
 jobs:
   notify:
+    # Dependabot PRs run with a restricted secret context, so the Discord
+    # webhook URL is unavailable and the curl step would always fail.
+    # Skip notification for bot-authored PRs to keep the check green.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
