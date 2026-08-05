@@ -104,29 +104,29 @@ git push -u origin feature/your-feature-name
 
 ## AI コードレビュー（AME AI Review System）
 
-このプロジェクトでは、静的解析と AI レビューを組み合わせた二重ゲート（Dual-Gate）方式を採用しています。
+このプロジェクトでは、静的解析とAIレビューを組み合わせた二重ゲート（Dual-Gate）方式を採用しています。
 
 ### Gate 1: pre-commit（ローカル）
 
-`git commit` 時にローカルで AI レビューが走ります。前段の静的解析（ruff / mypy / semgrep 等）が全て pass した場合のみ AI レビューが実行されます。
+`git commit` 時にローカルでAIレビューが走ります。前段の静的解析（ruff / mypy / semgrep等）を全てpassした場合のみAIレビューが実行されます。
 
-- 指摘がある場合はコミットがブロックされ、`CRITICAL` / `HIGH` / `MIDDLE` / `LOW` の重大度で指摘が表示されます。
-- `LOW` のみの指摘が 2 回連続した場合は無限ループ回避のためコミットが通ります。
-- `SKIP=ai-precommit-review` による迂回は禁止されています（`ai-skip-guard` フックがブロック）。緊急時は `sudo` または root 所有のバイパストークンのみ許可されます。
-- エンジン（opencode / claude / antigravity）とモデルは `.ame-review/config.json`、個人設定は Git 管理対象外の `.ame-review/config.user.json` で上書きできます。
+- 指摘がある場合はコミットをブロックし、`CRITICAL` / `HIGH` / `MIDDLE` / `LOW` の重大度で指摘を表示します。
+- `LOW` のみの指摘が2回連続した場合は無限ループ回避のためコミットが通ります。
+- `SKIP=ai-precommit-review` による迂回は禁止されています（`ai-skip-guard` フックがブロック）。緊急時は `sudo` またはroot所有のバイパストークンのみ許可されます。
+- エンジン（opencode / claude / antigravity）とモデルは `.ame-review/config.json` で設定できます。個人設定はGit管理対象外の `.ame-review/config.user.json` で上書きできます。
 
 ### Gate 2: PR レビュー（CI）
 
-PR コメントでスラッシュコマンドを入力すると CI 上で AI レビューが実行されます。
+PRコメントでスラッシュコマンドを入力するとCI上でAIレビューが実行されます。
 
 ```text
 /request-review     # PR 全体をレビュー（/review も可）
 ```
 
-- PR コメントの返信（`@ame-ai-reviewer 修正しました`）で、そのスレッドだけに自動で追加指摘または LGTM が返答されます（1 返信 = 1 LGTM）。
-- LGTM が届いたスレッドは Resolve してください。全スレッド Resolve 後に再度 `/request-review` で再レビューを依頼できます。
-- 静的解析エラーが 1 件でもある場合は Circuit Breaker により AI レビューがスキップされます。先に静的解析エラーを解消してください。
-- レビューエンジン・モデル・思考量は GitHub リポジトリの **Variables**（`REVIEW_ENGINE` / `REVIEW_MODEL` / `REPLY_MODEL` / `REVIEW_THINKING`）で設定します。認証情報は **Secrets**（`OPENCODE_AUTH_B64` 等）に Base64 で登録します。
+- PRコメントの返信（`@ame-ai-reviewer 修正しました`）で、そのスレッドだけに自動で追加指摘またはLGTMが返答されます（1返信 = 1 LGTM）。
+- LGTMが届いたスレッドはResolveしてください。全スレッドResolve後に再度 `/request-review` で再レビューを依頼できます。
+- 静的解析エラーが1件でもある場合はCircuit BreakerによりAIレビューがスキップされます。先に静的解析エラーを解消してください。
+- レビューエンジン・モデル・思考量はGitHubリポジトリの **Variables**（`REVIEW_ENGINE` / `REVIEW_MODEL` / `REPLY_MODEL` / `REVIEW_THINKING`）で設定します。認証情報は **Secrets**（`OPENCODE_AUTH_B64` 等）にBase64で登録します。
 
 ## コーディング規約 (Coding Conventions)
 

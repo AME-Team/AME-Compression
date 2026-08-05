@@ -180,14 +180,14 @@ cd frontend && npm run typecheck
 
 ### 5.4 AI コードレビュー（AME AI Review System）
 
-このプロジェクトは二重ゲート（Dual-Gate）方式でコード品質を担保しています。ローカルの静的解析 + AI レビュー（Gate 1）と、CI 上の PR レビュー（Gate 2）の二段構えです。
+このプロジェクトは二重ゲート（Dual-Gate）方式でコード品質を担保しています。ローカルの静的解析 + AIレビュー（Gate 1）と、CI上のPRレビュー（Gate 2）の二段構えです。
 
-- **Gate 1（pre-commit / ローカル）:** `git commit` 時に前段の静的解析（ruff / mypy / semgrep）が全て pass した場合のみ AI レビューが実行されます。CRITICAL/HIGH/MIDDLE 指摘があればコミットをブロックします（LOW のみ 2 回連続で無限ループ回避）。`SKIP=ai-precommit-review` による迂回は禁止です。
-- **Gate 2（PR / CI）:** PR コメントで `/request-review`（`/review` も可）と入力すると CI でレビューが実行されます。静的解析エラーが 1 件でもある場合は Circuit Breaker により AI レビューはスキップされます。
-- **返信サイクル:** 指摘スレッドに `@ame-ai-reviewer 修正しました` と返信すると、そのスレッドのみ再評価され LGTM または追加指摘が返ります。LGTM 後は Resolve し、全スレッド Resolve 後に再レビューを依頼します。
-- **設定:** `.ame-review/config.json`（版管理対象）。個人のエンジン・モデル上書きは `.ame-review/config.user.json`（gitignore 対象）。CI のエンジン・モデルは GitHub **Variables**（`REVIEW_ENGINE` / `REVIEW_MODEL` / `REPLY_MODEL` / `REVIEW_THINKING`）、認証は **Secrets**（`AME_AI_REVIEWER_APP_ID` / `AME_AI_REVIEWER_APP_PRIVATE_KEY` / `OPENCODE_AUTH_B64`）で管理します。
-- **フックのインストール:** `uv run pre-commit install --install-hooks -t pre-commit -t commit-msg -t pre-push -t post-commit`（`-t post-commit` は streak リセットに必須）。
-- **review_prompt.txt:** AI レビューの観点は `.ame-review/review_prompt.txt` で定義しています。本プロジェクト固有の規約（§3 品質基準、§4 禁止事項、§6 コーディング規約）が組み込まれています。出力フォーマットセクションは変更しないでください（パース処理が壊れます）。
+- **Gate 1（pre-commit / ローカル）:** `git commit` 時に前段の静的解析（ruff / mypy / semgrep）を全てpassした場合のみAIレビューが実行されます。CRITICAL/HIGH/MIDDLE指摘があればコミットをブロックします（LOWのみ2回連続で無限ループ回避）。`SKIP=ai-precommit-review` による迂回は禁止です。
+- **Gate 2（PR / CI）:** PRコメントで `/request-review`（`/review` も可）と入力するとCIでレビューが実行されます。静的解析エラーが1件でもある場合はCircuit BreakerによりAIレビューをスキップします。
+- **返信サイクル:** 指摘スレッドに `@ame-ai-reviewer 修正しました` と返信すると、そのスレッドのみ再評価されLGTMまたは追加指摘が返ります。LGTM後はResolveし、全スレッドResolve後に再レビューを依頼します。
+- **設定:** `.ame-review/config.json`（版管理対象）。個人のエンジン・モデル上書きは `.ame-review/config.user.json`（gitignore対象）。CIのエンジン・モデルはGitHub **Variables**（`REVIEW_ENGINE` / `REVIEW_MODEL` / `REPLY_MODEL` / `REVIEW_THINKING`）、認証は **Secrets**（`AME_AI_REVIEWER_APP_ID` / `AME_AI_REVIEWER_APP_PRIVATE_KEY` / `OPENCODE_AUTH_B64`）で管理します。
+- **フックのインストール:** `uv run pre-commit install --install-hooks -t pre-commit -t commit-msg -t pre-push -t post-commit`（`-t post-commit` はstreakリセットに必須）。
+- **review_prompt.txt:** AIレビューの観点は `.ame-review/review_prompt.txt` で定義しています。本プロジェクト固有の規約（§3品質基準、§4禁止事項、§6コーディング規約）が組み込まれています。出力フォーマットセクションは変更しないでください（パース処理が壊れます）。
 
 ---
 
