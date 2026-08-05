@@ -2,7 +2,7 @@
 # Pre-commit Hooks for AmeCompression
 # =============================================================================
 # Install (one-time):
-#   pre-commit install --install-hooks -t pre-commit -t commit-msg -t pre-push
+#   pre-commit install --install-hooks -t pre-commit -t commit-msg -t pre-push -t post-commit
 #
 # Manual run:
 #   pre-commit run --all-files            # all file hooks
@@ -14,10 +14,15 @@
 # This file is the single source of truth for static analysis. The CI
 # workflow (`.github/workflows/lint.yml`) runs `pre-commit run --all-files`
 # so that local and CI behavior are ALWAYS identical.
+#
+# AME AI Review System hooks (ai-skip-guard / ai-precommit-review /
+# ai-review-state-reset) are intentionally included here. In CI there are no
+# staged changes, so `ai-precommit-review` short-circuits and passes; the
+# hooks only actively review when a developer actually commits locally.
 # =============================================================================
 
 default_stages: [pre-commit, pre-merge-commit]
-default_install_hook_types: [pre-commit, commit-msg, pre-push]
+default_install_hook_types: [pre-commit, commit-msg, pre-push, post-commit]
 minimum_pre_commit_version: "4.0.0"
 
 # -----------------------------------------------------------------------------
@@ -310,3 +315,42 @@ repos:
         language: system
         stages: [commit-msg]
         always_run: true
+
+  # ===========================================================================
+  # 17. AME AI Review System — Gate 1 AI review (local commit only)
+  # ===========================================================================
+  # PR レビューと同じプロンプトで staged + ブランチ差分をレビューする。
+  # 指摘 0 件なら PASS。CRITICAL/HIGH/MIDDLE/WARNING/未知 severity を含めば FAIL。
+  # LOW/INFO のみが 2 回連続した場合は無限ループ回避で PASS する。
+  # エンジン失敗時は fail-closed でブロック (3 回連続で escape)。
+  # 前段の静的解析 (ruff/mypy/semgrep) が全て pass した場合のみ AI レビューを実行する
+  # (`precommit_require_static_checks`、既定 ON)。
+  # 設定: .ame-review/config.json / config.user.json (詳細は AGENTS.md)。
+  #
+  # NOTE: SKIP 環境変数による ai-precommit-review の迂回は ai-skip-guard が
+  # ブロックする (Issue #26)。CI では staged 変更が無いため常に pass する。
+  - repo: local
+    hooks:
+      - id: ai-skip-guard
+        name: "AI review skip guard (Issue #26)"
+        entry: uv run python -m ame_ai_review_system.skip_guard
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: ai-precommit-review
+        name: "AI Code Review (pre-commit)"
+        entry: uv run python -m ame_ai_review_system.precommit_review
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: ai-review-state-reset
+        name: "AI review state reset (post-commit)"
+        entry: uv run python -m ame_ai_review_system.post_commit_reset
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [post-commit]
