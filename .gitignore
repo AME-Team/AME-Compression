@@ -214,6 +214,18 @@ marimo/_lsp/
 __marimo__/
 
 # =============================================================================
+# AME AI Review System (local artifacts)
+# =============================================================================
+# config.json / review_prompt.txt are tracked (project config). The following
+# are environment-specific / regenerable and must NOT be committed:
+#   - engines-ts/  : TS engine sidecar (auto-deployed + npm install at runtime)
+#   - state/       : pre-commit streak state
+#   - config.user.json : per-developer engine/model overrides
+.ame-review/engines-ts/
+.ame-review/state/
+.ame-review/config.user.json
+
+# =============================================================================
 # Node.js (root-level tooling: markdownlint, textlint, commitlint, prettier)
 # =============================================================================
 # NOTE: The frontend has its own package.json + node_modules under frontend/.
