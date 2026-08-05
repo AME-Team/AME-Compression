@@ -119,7 +119,7 @@ git push -u origin feature/your-feature-name
 
 PR コメントでスラッシュコマンドを入力すると CI 上で AI レビューが実行されます。
 
-```
+```text
 /request-review     # PR 全体をレビュー（/review も可）
 ```
 
