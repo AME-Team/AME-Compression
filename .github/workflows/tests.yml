@@ -89,5 +89,7 @@ jobs:
         run: |
           uv pip install pip-audit
           # ame-ai-review-system is distributed via GitHub Release (not PyPI),
-          # so pip-audit cannot resolve it; skip it explicitly.
-          uv run pip-audit --strict --desc on --skip ame-ai-review-system
+          # so pip-audit cannot resolve it; skip it explicitly. `--desc off`
+          # avoids the per-dependency PyPI metadata lookup that would fail for
+          # non-PyPI packages (`--desc on`).
+          uv run pip-audit --strict --desc off --skip ame-ai-review-system
