@@ -41,7 +41,7 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=6.0",
     "pyinstaller>=6.0",
-    "ame-ai-review-system @ https://github.com/tarminjapan/AME-AI-Review-System/releases/download/v0.2.0/ame_ai_review_system-0.2.0-py3-none-any.whl",
+    "ame-ai-review-system @ https://github.com/tarminjapan/AME-AI-Review-System/releases/download/v0.2.1/ame_ai_review_system-0.2.1-py3-none-any.whl",
 ]
 
 # =============================================================================
