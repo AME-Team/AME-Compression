@@ -88,8 +88,10 @@ jobs:
       - name: Run pip-audit
         run: |
           uv pip install pip-audit
-          # ame-ai-review-system is distributed via GitHub Release (not PyPI),
-          # so pip-audit cannot resolve it; skip it explicitly. `--desc off`
-          # avoids the per-dependency PyPI metadata lookup that would fail for
-          # non-PyPI packages (`--desc on`).
-          uv run pip-audit --strict --desc off --skip ame-ai-review-system
+          # Audit production dependencies only: dev-only tooling does not ship
+          # to users (same philosophy as the npm audit step in lint.yml).
+          # ame-ai-review-system is distributed via GitHub Release (not PyPI)
+          # and pip-audit cannot resolve it, so it is excluded via
+          # `uv export --no-dev`.
+          uv export --no-dev --format requirements-txt -o /tmp/requirements-prod.txt
+          uv run pip-audit -r /tmp/requirements-prod.txt --strict --desc off
