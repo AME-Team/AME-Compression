@@ -82,6 +82,14 @@ class TestParseBitrate:
     def test_with_whitespace(self) -> None:
         assert parse_bitrate("  256k  ") == 256
 
+    def test_decimal_m_suffix(self) -> None:
+        """Fractional megabit values convert via float math in parse_bitrate."""
+        assert parse_bitrate("1.5m") == 1500
+
+    def test_zero(self) -> None:
+        """Zero kbps is a valid boundary value for parse_bitrate."""
+        assert parse_bitrate("0k") == 0
+
 
 class TestCalculateScaledResolution:
     def test_no_scaling_needed(self) -> None:
