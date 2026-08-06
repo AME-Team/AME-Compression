@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 interface ConfirmModalProps {
   open: boolean
@@ -25,38 +26,13 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   const modalRef = useRef<HTMLDivElement>(null)
   const confirmButtonRef = useRef<HTMLButtonElement>(null)
-  const cancelButtonRef = useRef<HTMLButtonElement>(null)
+
+  useFocusTrap(modalRef, open)
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         onCancel()
-        return
-      }
-
-      if (e.key !== 'Tab' || !modalRef.current) return
-
-      const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-      )
-      const focusable = Array.from(focusableElements)
-      if (focusable.length === 0) return
-
-      const firstEl = focusable[0]
-      const lastEl = focusable[focusable.length - 1]
-
-      if (!firstEl || !lastEl) return
-
-      if (e.shiftKey) {
-        if (document.activeElement === firstEl) {
-          e.preventDefault()
-          lastEl.focus()
-        }
-      } else {
-        if (document.activeElement === lastEl) {
-          e.preventDefault()
-          firstEl.focus()
-        }
       }
     },
     [onCancel],
@@ -64,13 +40,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
   useEffect(() => {
     if (!open) return
-    const previousActiveElement = document.activeElement
     confirmButtonRef.current?.focus()
-    return () => {
-      if (previousActiveElement instanceof HTMLElement) {
-        previousActiveElement.focus()
-      }
-    }
   }, [open])
 
   useEffect(() => {
@@ -106,7 +76,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
         </div>
         <div className="modal-footer">
           {showCancel && (
-            <button ref={cancelButtonRef} className="secondary-button" onClick={onCancel}>
+            <button className="secondary-button" onClick={onCancel}>
               {cancelLabel}
             </button>
           )}

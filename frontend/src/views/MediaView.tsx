@@ -8,12 +8,12 @@ import React, {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { Upload, Settings, FileSearch, ChevronDown, X, Sparkles } from 'lucide-react'
+import { Upload, Settings, FileSearch, X, Sparkles } from 'lucide-react'
 import { api } from '../services/api'
 import type { MediaProfile } from '../profiles'
 import { DEFAULT_SETTINGS } from '../profiles'
 import type { QualityAnalysisResult, BatchAnalysisItem, AnalysisMode } from '../types'
-import SelectDropdown from '../components/SelectDropdown'
+import Dropdown from '../components/Dropdown'
 
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'flac', 'm4a'])
 
@@ -39,119 +39,6 @@ const AUDIO_BITRATE_OPTIONS = [
 ]
 const FPS_OPTIONS = ['240', '144', '120', '90', '60', '50', '48', '30', '25', '24', '20', '12']
 const BITRATE_REGEX = /^\d+$/
-
-interface ComboBoxProps {
-  value: string
-  onChange: (val: string) => void
-  options: { value: string; label: string }[]
-  placeholder?: string
-  disabled?: boolean
-  sanitize?: (val: string) => string
-  validate?: (val: string) => boolean
-  fallbackValue?: string
-  ariaLabel?: string
-}
-
-const ComboBox: React.FC<ComboBoxProps> = ({
-  value,
-  onChange,
-  options,
-  placeholder,
-  disabled,
-  sanitize,
-  validate,
-  fallbackValue,
-  ariaLabel,
-}) => {
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent): void => {
-      if (
-        containerRef.current &&
-        e.target instanceof Element &&
-        !containerRef.current.contains(e.target)
-      ) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return (): void => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
-
-  return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
-      <div style={{ display: 'flex' }}>
-        <input
-          type="text"
-          value={value}
-          placeholder={placeholder}
-          disabled={disabled}
-          onChange={(e) => {
-            const sanitized = sanitize ? sanitize(e.target.value) : e.target.value
-            onChange(sanitized)
-          }}
-          onBlur={(e) => {
-            const val = e.target.value
-            if (validate && !validate(val)) {
-              onChange(fallbackValue ?? '')
-            } else {
-              onChange(val)
-            }
-          }}
-          style={{ flex: 1, borderRadius: '8px' }}
-          role="combobox"
-          aria-expanded={open}
-          aria-haspopup="listbox"
-          aria-label={ariaLabel}
-        />
-        <button
-          type="button"
-          className="secondary-button"
-          disabled={disabled}
-          onClick={() => {
-            setOpen(!open)
-          }}
-          style={{
-            borderRadius: '0 8px 8px 0',
-            padding: '0 8px',
-            borderLeft: 'none',
-            minWidth: '32px',
-          }}
-          aria-label="Toggle dropdown"
-        >
-          <ChevronDown size={14} />
-        </button>
-      </div>
-      {open && (
-        <ul role="listbox" className="combobox-dropdown">
-          {options.map((opt) => (
-            <li
-              key={opt.value}
-              role="option"
-              aria-selected={value === opt.value}
-              onClick={(): void => {
-                onChange(opt.value)
-                setOpen(false)
-              }}
-              className={`combobox-option${value === opt.value ? ' selected' : ''}`}
-              style={{
-                padding: '8px 12px',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-              }}
-            >
-              {opt.label}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
 
 interface AudioSettingsSectionProps {
   t: TFunction
@@ -199,7 +86,7 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
           <label htmlFor="volume-mode" className={disabled ? 'disabled-label' : ''}>
             {t('volume.mode')}
           </label>
-          <SelectDropdown
+          <Dropdown
             id="volume-mode"
             value={volumeMode}
             onChange={(val) => {
@@ -263,39 +150,36 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
           </label>
         </div>
         {denoiseEnabled && (
-          <div className="setting-item" style={{ gridColumn: 'span 2' }}>
+          <div className="setting-item span-2">
             <label htmlFor="denoise-slider" className={disabled ? 'disabled-label' : ''}>
               {t('denoise.level')}: {denoiseLevel} ({activePresetLabel})
             </label>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+            <div className="preset-row">
               <button
-                className={`secondary-button ${isLight ? 'active' : ''}`}
+                className={`secondary-button preset-button ${isLight ? 'active' : ''}`}
                 onClick={() => {
                   setDenoiseLevel(0.15)
                 }}
-                style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
                 aria-pressed={isLight}
                 disabled={disabled}
               >
                 {t('denoise.presets.light')}
               </button>
               <button
-                className={`secondary-button ${isMedium ? 'active' : ''}`}
+                className={`secondary-button preset-button ${isMedium ? 'active' : ''}`}
                 onClick={() => {
                   setDenoiseLevel(0.4)
                 }}
-                style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
                 aria-pressed={isMedium}
                 disabled={disabled}
               >
                 {t('denoise.presets.medium')}
               </button>
               <button
-                className={`secondary-button ${isStrong ? 'active' : ''}`}
+                className={`secondary-button preset-button ${isStrong ? 'active' : ''}`}
                 onClick={() => {
                   setDenoiseLevel(0.7)
                 }}
-                style={{ flex: 1, padding: '4px', fontSize: '0.8rem' }}
                 aria-pressed={isStrong}
                 disabled={disabled}
               >
@@ -838,11 +722,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               <span className="file-count">
                 {t('file.selected_count', { count: inputPaths.length })}
               </span>
-              <button
-                className="secondary-button"
-                onClick={clearFiles}
-                style={{ fontSize: '0.8rem', padding: '4px 8px' }}
-              >
+              <button className="secondary-button btn-mini" onClick={clearFiles}>
                 {t('file.clear_all')}
               </button>
             </>
@@ -851,42 +731,19 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
           )}
         </div>
         {failedFiles.length > 0 && (
-          <div
-            style={{
-              marginTop: '12px',
-              padding: '10px 14px',
-              borderRadius: '8px',
-              background: 'var(--color-error-bg)',
-              border: '1px solid rgba(248, 113, 113, 0.2)',
-            }}
-            role="alert"
-          >
-            <p
-              style={{
-                margin: '0 0 4px',
-                color: 'var(--color-error)',
-                fontWeight: 600,
-                fontSize: '0.85rem',
-              }}
-            >
+          <div className="error-panel" role="alert">
+            <p className="error-panel-title">
               {t('file.failed_count', { count: failedFiles.length })}
             </p>
-            <ul
-              style={{
-                margin: 0,
-                paddingLeft: '20px',
-                color: 'var(--color-error)',
-                fontSize: '0.8rem',
-              }}
-            >
+            <ul className="error-panel-list">
               {failedFiles.map((f) => (
                 <li key={f}>{f.split(/[\\/]/).pop()}</li>
               ))}
             </ul>
           </div>
         )}
-        <div style={{ marginTop: '16px' }} role="radiogroup" aria-label={t('nav.video_audio')}>
-          <label style={{ display: 'inline-block', marginRight: '16px' }}>
+        <div className="media-type-group" role="radiogroup" aria-label={t('nav.video_audio')}>
+          <label className="media-type-radio">
             <input
               type="radio"
               name="media-type"
@@ -897,7 +754,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             />{' '}
             {t('nav.video')}
           </label>
-          <label style={{ display: 'inline-block' }}>
+          <label className="media-type-radio">
             <input
               type="radio"
               name="media-type"
@@ -924,7 +781,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               <label htmlFor="analysis-mode" className="batch-optimize-toggle-label">
                 {t('quality_analysis.mode_label')}
               </label>
-              <SelectDropdown
+              <Dropdown
                 id="analysis-mode"
                 value={analysisMode}
                 onChange={(val) => {
@@ -951,26 +808,13 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                 </small>
               )}
             </div>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'flex-end',
-                marginBottom: '8px',
-                gap: '8px',
-              }}
-            >
+            <div className="action-row">
               {isAnalysisActive ? (
                 <>
                   <button
-                    className="secondary-button"
+                    className="secondary-button button-with-icon"
                     disabled={batchAnalyzing || inputPaths.length === 0}
                     onClick={() => void handleBatchAnalyze()}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '0.82rem',
-                    }}
                     aria-label={t('quality_analysis.batch_analyze')}
                   >
                     <Sparkles size={14} />
@@ -983,9 +827,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   </button>
                   {batchAnalysisResults.length > 0 && (
                     <button
-                      className="secondary-button"
+                      className="secondary-button button-with-icon"
                       onClick={clearBatchAnalysis}
-                      style={{ fontSize: '0.82rem' }}
                     >
                       {t('file.clear_all')}
                     </button>
@@ -993,10 +836,9 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                 </>
               ) : (
                 <button
-                  className="secondary-button"
+                  className="secondary-button button-with-icon"
                   disabled={analyzingQuality || inputPaths.length === 0}
                   onClick={() => void handleAnalyzeQuality()}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem' }}
                   aria-label={t('quality_analysis.analyze')}
                 >
                   <Sparkles size={14} />
@@ -1024,33 +866,11 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             )}
             {!isAnalysisActive && qualityResult && (
               <div
-                style={{
-                  padding: '12px 16px',
-                  borderRadius: '8px',
-                  background:
-                    qualityResult.status === 'error'
-                      ? 'var(--color-error-bg, rgba(239, 68, 68, 0.08))'
-                      : 'var(--color-info-bg, rgba(59, 130, 246, 0.08))',
-                  border:
-                    qualityResult.status === 'error'
-                      ? '1px solid var(--color-error-border, rgba(239, 68, 68, 0.2))'
-                      : '1px solid var(--color-info-border, rgba(59, 130, 246, 0.2))',
-                  marginBottom: '12px',
-                }}
+                className={`analysis-result ${qualityResult.status === 'error' ? 'error' : 'success'}`}
                 role="alert"
               >
-                <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px' }}>
-                  {t('quality_analysis.result_title')}
-                </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-                    gap: '8px',
-                    marginBottom: '8px',
-                    fontSize: '0.82rem',
-                  }}
-                >
+                <div className="analysis-result-title">{t('quality_analysis.result_title')}</div>
+                <div className="analysis-result-grid">
                   <div>
                     <strong>{t('quality_analysis.recommended_crf')}:</strong>{' '}
                     {qualityResult.recommended_crf}
@@ -1065,15 +885,9 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                       : t('quality_analysis.no')}
                   </div>
                 </div>
-                <p style={{ margin: '0 0 8px', fontSize: '0.8rem', lineHeight: 1.4 }}>
-                  {qualityResult.reason}
-                </p>
+                <p className="analysis-result-reason">{qualityResult.reason}</p>
                 {qualityResult.status === 'success' && (
-                  <button
-                    className="primary-button"
-                    onClick={applyQualitySettings}
-                    style={{ fontSize: '0.8rem', padding: '6px 12px' }}
-                  >
+                  <button className="primary-button btn-compact" onClick={applyQualitySettings}>
                     {t('quality_analysis.apply_settings')}
                   </button>
                 )}
@@ -1117,7 +931,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               </div>
               <div className="setting-item">
                 <label htmlFor="max-resolution">{t('video_settings.max_resolution')}</label>
-                <SelectDropdown
+                <Dropdown
                   id="max-resolution"
                   value={maxResolution}
                   onChange={(val) => {
@@ -1134,31 +948,32 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   ]}
                 />
                 {maxResolution === 'custom' && (
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                  <div className="resolution-row">
                     <input
                       type="number"
-                      placeholder="W"
+                      placeholder={t('video_settings.custom_width_placeholder')}
                       value={customWidth}
                       onChange={(e) => {
                         setCustomWidth(e.target.value)
                       }}
-                      aria-label="Custom width"
+                      aria-label={t('video_settings.custom_width')}
                     />
                     <input
                       type="number"
-                      placeholder="H"
+                      placeholder={t('video_settings.custom_height_placeholder')}
                       value={customHeight}
                       onChange={(e) => {
                         setCustomHeight(e.target.value)
                       }}
-                      aria-label="Custom height"
+                      aria-label={t('video_settings.custom_height')}
                     />
                   </div>
                 )}
               </div>
               <div className="setting-item">
                 <label htmlFor="max-fps">{t('video_settings.max_fps')}</label>
-                <ComboBox
+                <Dropdown
+                  editable
                   value={maxFps === 'unlimited' ? '' : maxFps}
                   onChange={(val) => {
                     setMaxFps(val || 'unlimited')
@@ -1180,10 +995,11 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             <div className="settings-grid">
               <div className="setting-item">
                 <label htmlFor="video-audio-bitrate">{t('video_settings.audio_bitrate')}</label>
-                <ComboBox
+                <Dropdown
+                  editable
                   value={videoAudioBitrate}
                   onChange={setVideoAudioBitrate}
-                  placeholder="e.g. 192"
+                  placeholder={t('video_settings.bitrate_placeholder')}
                   disabled={!audioEnabled}
                   ariaLabel={t('video_settings.audio_bitrate')}
                   validate={BITRATE_REGEX.test.bind(BITRATE_REGEX)}
@@ -1224,10 +1040,11 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             <div className="settings-grid">
               <div className="setting-item">
                 <label htmlFor="audio-bitrate">{t('audio_settings.bitrate')}</label>
-                <ComboBox
+                <Dropdown
+                  editable
                   value={audioBitrate}
                   onChange={setAudioBitrate}
-                  placeholder="e.g. 192"
+                  placeholder={t('audio_settings.bitrate_placeholder')}
                   disabled={disableAudioSettings}
                   ariaLabel={t('audio_settings.bitrate')}
                   validate={BITRATE_REGEX.test.bind(BITRATE_REGEX)}

@@ -1,4 +1,5 @@
 import React, { useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import Sidebar from './Sidebar'
 
 interface LayoutProps {
@@ -8,6 +9,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) => {
+  const { t } = useTranslation()
   const mainRef = useRef<HTMLDivElement>(null)
 
   const handleSkipToContent = useCallback((e: React.KeyboardEvent<HTMLAnchorElement>): void => {
@@ -19,7 +21,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, onViewChange }) =
   return (
     <div className="app-container">
       <a href="#main-content" className="skip-to-content" onKeyDown={handleSkipToContent}>
-        Skip to main content
+        {t('a11y.skip_to_content')}
       </a>
       <Sidebar activeView={activeView} onViewChange={onViewChange} />
       <main id="main-content" className="main-content" ref={mainRef} tabIndex={-1}>

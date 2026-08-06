@@ -107,7 +107,9 @@ html textarea {
 
 .nav-item:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--color-primary), 0 0 0 4px var(--color-focus-ring);
+  box-shadow:
+    0 0 0 2px var(--color-primary),
+    0 0 0 4px var(--color-focus-ring);
 }
 
 .nav-item.active {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Loader2 } from 'lucide-react'
 import Layout from './components/Layout'
 import MediaView from './views/MediaView'
 import type { MediaViewHandle } from './views/MediaView'
@@ -11,6 +12,16 @@ import ToastProvider from './components/ToastProvider'
 import CommandPalette from './components/CommandPalette'
 import { useJobs } from './hooks/useJobs'
 import { api, initializeApi } from './services/api'
+import {
+  useTheme,
+  useAccentColor,
+  useDocumentLang,
+  isThemeMode,
+  isAccentColor,
+  resolveTheme,
+  type ThemeMode,
+  type AccentColor,
+} from './hooks/useTheme'
 import './App.css'
 
 interface BackendErrorState {
@@ -44,6 +55,29 @@ function App(): React.JSX.Element {
   const mediaViewRef = useRef<MediaViewHandle>(null)
   const [backendError, setBackendError] = useState<BackendErrorState>(INITIAL_BACKEND_ERROR)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  // 初期値は localStorage の保存値から lazy に読み込む（index.html の FOUC 防止
+  // スクリプトと一致させる）。バックエンド取得完了後に保存済み設定で上書きされる。
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    const stored = localStorage.getItem('ame-theme-mode')
+    return isThemeMode(stored) ? stored : 'system'
+  })
+  const [accentColor, setAccentColor] = useState<AccentColor>(() => {
+    const stored = localStorage.getItem('ame-accent-color')
+    return isAccentColor(stored) ? stored : 'trust-blue'
+  })
+
+  // persist は初回設定読み込み完了後 (isReady=true) のみ有効化する。
+  // 起動時のデフォルト値で localStorage を上書きしないため。
+  useTheme(themeMode, isReady)
+  useAccentColor(accentColor, isReady)
+  useDocumentLang(i18n.resolvedLanguage ?? 'en')
+
+  // SettingsView のプレビュー（未保存）が data-theme / data-accent に残らないよう、
+  // ビュー切替のたびに保存済みの外観設定を再適用する（App を単一の真実源にする）。
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', resolveTheme(themeMode))
+    document.documentElement.setAttribute('data-accent', accentColor)
+  }, [activeView, themeMode, accentColor])
 
   const [compressionDisabled, setCompressionDisabled] = useState(true)
   const [compressionLoading, setCompressionLoading] = useState(false)
@@ -93,15 +127,18 @@ function App(): React.JSX.Element {
         await initializeApi()
 
         const response = await api.get('/settings')
-        const { language, appearance_mode } = response.data
+        const { language, appearance_mode, accent_color } = response.data
 
         if (language) {
           void i18n.changeLanguage(language)
         }
 
-        if (appearance_mode) {
-          document.documentElement.setAttribute('data-theme', appearance_mode)
-          void window.electronAPI?.setThemeColor(appearance_mode)
+        if (isThemeMode(appearance_mode)) {
+          setThemeMode(appearance_mode)
+        }
+
+        if (isAccentColor(accent_color)) {
+          setAccentColor(accent_color)
         }
       } catch (error) {
         console.error('Failed to initialize app settings', error)
@@ -148,8 +185,17 @@ function App(): React.JSX.Element {
     }
   }, [])
 
+  const handleAppearanceChange = useCallback((mode: ThemeMode, accent: AccentColor): void => {
+    setThemeMode(mode)
+    setAccentColor(accent)
+  }, [])
+
   if (!isReady) {
-    return <div className="loading-screen">Loading...</div>
+    return (
+      <div className="loading-screen" role="status" aria-live="polite">
+        <Loader2 size={20} className="spin" />
+      </div>
+    )
   }
 
   const renderView = (): React.JSX.Element => {
@@ -166,12 +212,14 @@ function App(): React.JSX.Element {
           />
         )
       case 'settings':
-        return <SettingsView />
+        return <SettingsView onAppearanceChange={handleAppearanceChange} />
       default:
         return (
           <div className="view-container">
-            <h1>Coming Soon</h1>
-            <p>This view is under development.</p>
+            <header className="view-header">
+              <h1>{t('coming_soon.title')}</h1>
+              <p>{t('coming_soon.description')}</p>
+            </header>
           </div>
         )
     }
@@ -217,6 +265,9 @@ function App(): React.JSX.Element {
         }}
         onNavigate={setActiveView}
         onStartCompression={handleStartCompression}
+        onApplyDefaults={() => {
+          mediaViewRef.current?.applyDefaults()
+        }}
       />
       <ConfirmModal
         open={backendError.open}

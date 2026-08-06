@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, Play, Settings, RotateCcw, Layers } from 'lucide-react'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 interface CommandPaletteProps {
   open: boolean
   onClose: () => void
   onNavigate: (view: string) => void
   onStartCompression: () => void
+  onApplyDefaults: () => void
 }
 
 interface CommandItem {
@@ -21,12 +23,15 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   onClose,
   onNavigate,
   onStartCompression,
+  onApplyDefaults,
 }) => {
   const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  const listRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useFocusTrap(dialogRef, open)
 
   const commands: CommandItem[] = [
     {
@@ -61,12 +66,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
       label: t('profile.load_defaults'),
       icon: <RotateCcw size={16} />,
       action: () => {
+        onApplyDefaults()
         onClose()
       },
     },
   ]
 
   const filtered = commands.filter((cmd) => cmd.label.toLowerCase().includes(query.toLowerCase()))
+  const activeCommand = activeIndex < filtered.length ? filtered[activeIndex] : undefined
 
   useEffect(() => {
     if (open) {
@@ -100,7 +107,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
       }
       if (e.key === 'Enter' && filtered[activeIndex]) {
         filtered[activeIndex].action()
-        return
       }
     },
     [filtered, activeIndex, onClose],
@@ -108,8 +114,9 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   useEffect(() => {
     if (!open) return
-    const activeItem = listRef.current?.querySelector(`[data-index="${activeIndex}"]`)
-    activeItem?.scrollIntoView({ block: 'nearest' })
+    dialogRef.current?.querySelector(`[data-index="${activeIndex}"]`)?.scrollIntoView({
+      block: 'nearest',
+    })
   }, [activeIndex, open])
 
   if (!open) return null
@@ -124,13 +131,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     >
       <div
         className="command-palette-dialog"
+        ref={dialogRef}
         onClick={(e) => {
           e.stopPropagation()
         }}
         onKeyDown={handleKeyDown}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 16px' }}>
-          <Search size={16} style={{ color: '#737373', flexShrink: 0 }} />
+        <div className="command-palette-search">
+          <Search size={16} className="command-palette-search-icon" />
           <input
             ref={inputRef}
             className="command-palette-input"
@@ -140,26 +148,19 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
               setQuery(e.target.value)
             }}
             placeholder={t('command_palette.placeholder')}
-            autoFocus
             aria-label={t('command_palette.placeholder')}
+            aria-controls="command-palette-listbox"
+            aria-activedescendant={activeCommand ? `command-item-${activeCommand.id}` : undefined}
           />
         </div>
-        <div className="command-palette-list" ref={listRef} role="listbox">
+        <div id="command-palette-listbox" className="command-palette-list" role="listbox">
           {filtered.length === 0 && (
-            <div
-              style={{
-                padding: '20px',
-                textAlign: 'center',
-                color: '#737373',
-                fontSize: '0.85rem',
-              }}
-            >
-              {t('command_palette.no_results')}
-            </div>
+            <div className="command-palette-empty">{t('command_palette.no_results')}</div>
           )}
           {filtered.map((cmd, index) => (
             <button
               key={cmd.id}
+              id={`command-item-${cmd.id}`}
               className={`command-palette-item ${index === activeIndex ? 'active' : ''}`}
               onClick={cmd.action}
               role="option"
@@ -167,7 +168,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
               data-index={index}
             >
               {cmd.icon}
-              <span style={{ flex: 1 }}>{cmd.label}</span>
+              <span className="command-palette-item-label">{cmd.label}</span>
             </button>
           ))}
         </div>
