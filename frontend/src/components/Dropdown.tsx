@@ -204,6 +204,10 @@ const Dropdown: React.FC<DropdownProps> = ({
       setOpen(false)
       return
     }
+    // フォーカスがドロップダウン内部（オプションやトグル）へ移動した場合は閉じない。
+    if (e.relatedTarget instanceof Node && containerRef.current?.contains(e.relatedTarget)) {
+      return
+    }
     commitEditableValue(e.target.value)
     setOpen(false)
   }
@@ -249,6 +253,9 @@ const Dropdown: React.FC<DropdownProps> = ({
             type="button"
             className="secondary-button combobox-toggle"
             disabled={disabled}
+            onMouseDown={(e) => {
+              e.preventDefault()
+            }}
             onClick={() => {
               if (open) {
                 setOpen(false)
@@ -297,6 +304,9 @@ const Dropdown: React.FC<DropdownProps> = ({
               role="option"
               aria-selected={value === opt.value}
               data-index={index}
+              onMouseDown={(e) => {
+                e.preventDefault()
+              }}
               onClick={(): void => {
                 selectOption(opt)
               }}

@@ -106,6 +106,24 @@ def test_settings_allowlists_sync_with_frontend() -> None:
     assert frontend_modes == VALID_THEME_MODES
 
 
+def test_local_storage_keys_sync_between_html_and_hook() -> None:
+    """index.html の FOUC 防止スクリプトと useTheme.ts の localStorage キーが一致するか検証する.
+
+    両者は import で共有できないため文字列リテラルで重複している。キー変更時に片側だけ
+    更新されると FOUC 防止が無効になるため、回帰テストでドリフトを検出する。
+    """
+    root = Path(__file__).resolve().parents[1]
+    index_html = (root / "frontend/index.html").read_text(encoding="utf-8")
+    use_theme_src = (root / "frontend/src/hooks/useTheme.ts").read_text(encoding="utf-8")
+
+    html_keys = set(re.findall(r"localStorage\.getItem\('([^']+)'\)", index_html))
+    hook_keys = set(re.findall(r"localStorage\.(?:getItem|setItem)\('([^']+)'\)", use_theme_src))
+
+    assert hook_keys.issubset(html_keys), (
+        f"useTheme.ts のキー {hook_keys - html_keys} が index.html に存在しません"
+    )
+
+
 def test_audio_compression_endpoint(client: FlaskClient) -> None:
     with (
         patch("backend.api.blueprints.jobs.Path.exists", return_value=True),
