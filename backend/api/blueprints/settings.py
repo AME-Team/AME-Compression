@@ -40,13 +40,18 @@ def update_settings() -> Response | tuple[Response, int]:
     raw_data = request.json
     if not isinstance(raw_data, dict):
         return jsonify({"error": "Request body must be a JSON object"}), 400
-    data = cast("dict[str, str | None]", raw_data)
-    if not data:
+    if not raw_data:
         return jsonify({"error": "No data provided"}), 400
 
-    # None の値は保存しない (update_all に null が混入するのを防ぐ)。
+    # 実行時の型検証: None は保存せず、残りはすべて文字列であることを保証する。
     # 空文字は ffmpeg_path / default_output_dir のクリア操作として有効なため除外しない。
-    data = {key: value for key, value in data.items() if value is not None}
+    data: dict[str, str] = {}
+    for key, value in cast("dict[str, object]", raw_data).items():
+        if value is None:
+            continue
+        if not isinstance(value, str):
+            return jsonify({"error": f"Setting '{key}' must be a string"}), 400
+        data[key] = value
 
     for key, allowed in (
         ("appearance_mode", VALID_THEME_MODES),

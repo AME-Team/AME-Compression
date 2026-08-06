@@ -318,18 +318,6 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
   useFocusTrap(profileModalRef, profileModalOpen)
   useFocusTrap(progressModalRef, progressModalOpen)
 
-  useEffect(() => {
-    if (profileModalOpen) {
-      profileModalRef.current?.querySelector<HTMLElement>('input, button, [tabindex]')?.focus()
-    }
-  }, [profileModalOpen])
-
-  useEffect(() => {
-    if (progressModalOpen) {
-      progressModalRef.current?.querySelector<HTMLElement>('button, [tabindex]')?.focus()
-    }
-  }, [progressModalOpen])
-
   return (
     <>
       <div className="floating-bar" role="toolbar" aria-label={t('compress.start')}>

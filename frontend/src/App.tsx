@@ -57,13 +57,22 @@ function App(): React.JSX.Element {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   // 初期値は localStorage の保存値から lazy に読み込む（index.html の FOUC 防止
   // スクリプトと一致させる）。バックエンド取得完了後に保存済み設定で上書きされる。
+  // プライバシーモード等でストレージが無効な場合は例外を握りつぶしてデフォルトに戻す。
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
-    const stored = localStorage.getItem('ame-theme-mode')
-    return isThemeMode(stored) ? stored : 'system'
+    try {
+      const stored = localStorage.getItem('ame-theme-mode')
+      return isThemeMode(stored) ? stored : 'system'
+    } catch {
+      return 'system'
+    }
   })
   const [accentColor, setAccentColor] = useState<AccentColor>(() => {
-    const stored = localStorage.getItem('ame-accent-color')
-    return isAccentColor(stored) ? stored : 'trust-blue'
+    try {
+      const stored = localStorage.getItem('ame-accent-color')
+      return isAccentColor(stored) ? stored : 'trust-blue'
+    } catch {
+      return 'trust-blue'
+    }
   })
 
   // persist は初回設定読み込み完了後 (isReady=true) のみ有効化する。

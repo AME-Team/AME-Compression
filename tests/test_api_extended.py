@@ -66,6 +66,16 @@ def test_update_settings_non_dict_body(client: FlaskClient) -> None:
     assert response.status_code == 400
 
 
+def test_update_settings_non_string_value(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json={"appearance_mode": ["dark"]})
+    assert response.status_code == 400
+
+
+def test_update_settings_unhashable_accent(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json={"accent_color": {"nested": True}})
+    assert response.status_code == 400
+
+
 def test_update_settings_null_values_filtered(client: FlaskClient) -> None:
     response = client.post("/api/settings", json={"appearance_mode": None})
     assert response.status_code == 200
