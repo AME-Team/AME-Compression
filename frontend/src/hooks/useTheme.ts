@@ -38,13 +38,21 @@ export function resolveTheme(mode: ThemeMode): 'light' | 'dark' {
 const THEME_MODE_STORAGE_KEY = 'ame-theme-mode'
 const ACCENT_COLOR_STORAGE_KEY = 'ame-accent-color'
 
+function storeValue(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // プライバシーモード等でストレージが無効な場合は永続化をスキップする（表示には影響しない）。
+  }
+}
+
 export function useTheme(mode: ThemeMode, persist = false): void {
   useEffect(() => {
     const resolved = resolveTheme(mode)
     document.documentElement.setAttribute('data-theme', resolved)
     void window.electronAPI?.setThemeColor(mode)
     if (persist) {
-      localStorage.setItem(THEME_MODE_STORAGE_KEY, mode)
+      storeValue(THEME_MODE_STORAGE_KEY, mode)
     }
   }, [mode, persist])
 
@@ -67,7 +75,7 @@ export function useAccentColor(accent: AccentColor | null, persist = false): voi
     if (!accent) return
     document.documentElement.setAttribute('data-accent', accent)
     if (persist) {
-      localStorage.setItem(ACCENT_COLOR_STORAGE_KEY, accent)
+      storeValue(ACCENT_COLOR_STORAGE_KEY, accent)
     }
   }, [accent, persist])
 }
