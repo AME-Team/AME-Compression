@@ -1,8 +1,11 @@
+import re
 from collections.abc import Generator
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from backend.api.app import create_app
+from backend.api.blueprints.settings import VALID_ACCENT_COLORS, VALID_THEME_MODES
 from backend.api.job_runner import job_runner
 from backend.settings import SettingsManager
 from flask.testing import FlaskClient
@@ -36,6 +39,104 @@ def test_update_settings(client: FlaskClient) -> None:
     response = client.get("/api/settings")
     assert response.get_json()["language"] == "ja"
     assert response.get_json()["appearance_mode"] == "dark"
+
+
+def test_update_settings_accent_color(client: FlaskClient) -> None:
+    new_settings = {"accent_color": "stable-green"}
+    response = client.post("/api/settings", json=new_settings)
+    assert response.status_code == 200
+    assert response.get_json()["status"] == "success"
+
+    response = client.get("/api/settings")
+    assert response.get_json()["accent_color"] == "stable-green"
+
+
+def test_update_settings_invalid_accent_color(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json={"accent_color": "neon-pink"})
+    assert response.status_code == 400
+
+
+def test_update_settings_invalid_appearance_mode(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json={"appearance_mode": "sepia"})
+    assert response.status_code == 400
+
+
+def test_update_settings_non_dict_body(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json=["appearance_mode", "dark"])
+    assert response.status_code == 400
+
+
+def test_update_settings_non_string_value(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json={"appearance_mode": ["dark"]})
+    assert response.status_code == 400
+
+
+def test_update_settings_unhashable_accent(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json={"accent_color": {"nested": True}})
+    assert response.status_code == 400
+
+
+def test_update_settings_null_values_filtered(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json={"appearance_mode": None})
+    assert response.status_code == 200
+
+    response = client.get("/api/settings")
+    assert response.get_json()["appearance_mode"] in ("light", "dark", "system")
+
+
+def test_update_settings_clear_path_with_empty_string(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json={"ffmpeg_path": ""})
+    assert response.status_code == 200
+
+    response = client.get("/api/settings")
+    assert response.get_json()["ffmpeg_path"] == ""
+
+
+def test_settings_allowlists_sync_with_frontend() -> None:
+    """バックエンドとフロントエンドの許可集合が同期していることを検証する.
+
+    両者は別プロセスで動作するため定数を共有できず、NOTE コメントで手動同期を
+    明示している。ここで回帰テストとしてドリフトを検出する。
+    """
+    use_theme_src = (
+        Path(__file__).resolve().parents[1] / "frontend/src/hooks/useTheme.ts"
+    ).read_text(encoding="utf-8")
+
+    accent_match = re.search(
+        r"export const ACCENT_COLORS: AccentColor\[\] = \[(.*?)\]",
+        use_theme_src,
+        re.DOTALL,
+    )
+    assert accent_match is not None, "useTheme.ts から ACCENT_COLORS を抽出できませんでした"
+    frontend_accents = set(re.findall(r"'([^']+)'", accent_match.group(1)))
+    assert frontend_accents == VALID_ACCENT_COLORS
+
+    mode_match = re.search(
+        r"export type ThemeMode = (.*)$",
+        use_theme_src,
+        re.MULTILINE,
+    )
+    assert mode_match is not None, "useTheme.ts から ThemeMode を抽出できませんでした"
+    frontend_modes = set(re.findall(r"'([^']+)'", mode_match.group(1)))
+    assert frontend_modes == VALID_THEME_MODES
+
+
+def test_local_storage_keys_sync_between_html_and_hook() -> None:
+    """index.html の FOUC 防止スクリプトと useTheme.ts の localStorage キーが一致するか検証する.
+
+    両者は import で共有できないため文字列リテラルで重複している。キー変更時に片側だけ
+    更新されると FOUC 防止が無効になるため、回帰テストでドリフトを検出する。
+    """
+    root = Path(__file__).resolve().parents[1]
+    index_html = (root / "frontend/index.html").read_text(encoding="utf-8")
+    use_theme_src = (root / "frontend/src/hooks/useTheme.ts").read_text(encoding="utf-8")
+
+    html_keys = set(re.findall(r"localStorage\.getItem\('([^']+)'\)", index_html))
+    hook_keys = set(re.findall(r"localStorage\.(?:getItem|setItem)\('([^']+)'\)", use_theme_src))
+
+    assert hook_keys.issubset(html_keys), (
+        f"useTheme.ts のキー {hook_keys - html_keys} が index.html に存在しません"
+    )
 
 
 def test_audio_compression_endpoint(client: FlaskClient) -> None:

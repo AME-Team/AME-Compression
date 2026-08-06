@@ -7,6 +7,8 @@ import type { MediaProfile } from '../profiles'
 import { loadProfiles, saveProfiles } from '../profiles'
 import { ProgressPanel } from './ProgressPanel'
 import ConfirmModal from './ConfirmModal'
+import { useToast } from './ToastContext'
+import { useFocusTrap } from '../hooks/useFocusTrap'
 
 function useClickOutside(
   ref: React.RefObject<HTMLDivElement | null>,
@@ -235,15 +237,10 @@ const ProfileModalContent: React.FC<ProfileModalContentProps> = ({
           ))}
         </div>
       ) : (
-        <p
-          className="text-muted"
-          style={{ fontSize: '0.85rem', textAlign: 'center', padding: '16px 0' }}
-        >
-          {t('profile.no_profiles')}
-        </p>
+        <p className="text-muted profile-empty">{t('profile.no_profiles')}</p>
       )}
       {statusMessage && (
-        <div className="status-message" style={{ marginTop: '8px' }} role="status">
+        <div className="status-message profile-status" role="status">
           {statusMessage}
         </div>
       )}
@@ -263,23 +260,13 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
   onApplyDefaults,
 }) => {
   const { t } = useTranslation()
+  const { showToast } = useToast()
   const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [progressModalOpen, setProgressModalOpen] = useState(false)
-  const [toastMessage, setToastMessage] = useState('')
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [confirmState, setConfirmState] = useState<ConfirmState>(INITIAL_CONFIRM_STATE)
   const profileModalRef = useRef<HTMLDivElement>(null)
   const progressModalRef = useRef<HTMLDivElement>(null)
   const prevIsCompressingRef = useRef(false)
-
-  const showToast = useCallback((msg: string): void => {
-    if (toastTimerRef.current) clearTimeout(toastTimerRef.current)
-    setToastMessage(msg)
-    toastTimerRef.current = setTimeout(() => {
-      setToastMessage('')
-      toastTimerRef.current = null
-    }, 3000)
-  }, [])
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>
@@ -327,6 +314,9 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
     setProfileModalOpen(false)
     onStartCompression()
   }
+
+  useFocusTrap(profileModalRef, profileModalOpen)
+  useFocusTrap(progressModalRef, progressModalOpen)
 
   return (
     <>
@@ -479,11 +469,6 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
               )}
             </div>
           </div>
-        </div>
-      )}
-      {toastMessage && (
-        <div className="toast-notification toast-success" role="status" aria-live="polite">
-          {toastMessage}
         </div>
       )}
       <ConfirmModal

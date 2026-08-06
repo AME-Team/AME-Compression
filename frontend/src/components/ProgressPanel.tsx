@@ -49,7 +49,7 @@ const JobItem: React.FC<JobItemProps> = ({ job, onCancel, onDismiss }) => {
   return (
     <div className={`job-item ${job.status}`} role="listitem">
       <div className="job-info">
-        <span className="job-type">{job.type === 'video' ? 'Video' : 'Audio'}</span>
+        <span className="job-type">{job.type === 'video' ? t('nav.video') : t('nav.audio')}</span>
         {job.filename && (
           <span className="job-filename" title={job.filename}>
             {job.filename}
@@ -132,7 +132,7 @@ const JobItem: React.FC<JobItemProps> = ({ job, onCancel, onDismiss }) => {
 
       {job.status === 'failed' && (
         <div className="job-result">
-          <span className="result-compression" style={{ color: 'var(--color-error)' }}>
+          <span className="result-compression result-error">
             <AlertCircle size={12} /> {t('compress.failed')}
           </span>
         </div>
@@ -206,12 +206,7 @@ const ProgressPanel: React.FC<ProgressPanelProps> = ({
   if (embedded) {
     if (jobs.length === 0) return null
     return (
-      <div
-        className="job-list"
-        style={{ maxHeight: 'none', overflowY: 'visible' }}
-        role="list"
-        aria-label={t('compress.progress')}
-      >
+      <div className="job-list job-list-embedded" role="list" aria-label={t('compress.progress')}>
         {jobs.map((job) => (
           <JobItem key={job.id} job={job} onCancel={onCancel} onDismiss={onDismiss} />
         ))}

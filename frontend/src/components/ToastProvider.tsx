@@ -67,25 +67,17 @@ const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <ToastContext value={{ showToast }}>
       {children}
       <div
+        className="toast-container"
         aria-live="polite"
         aria-atomic="false"
         aria-label={t('a11y.notifications')}
-        style={{
-          position: 'fixed',
-          bottom: '72px',
-          right: '24px',
-          zIndex: 400,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}
       >
         {toasts.map((toast) => {
           const config = VARIANT_CONFIG[toast.variant]
           return (
             <div key={toast.id} className={`toast-notification ${config.className}`} role="status">
               {config.icon}
-              <span style={{ flex: 1 }}>{toast.message}</span>
+              <span className="toast-message">{toast.message}</span>
               <button
                 className="toast-close-btn"
                 onClick={() => {

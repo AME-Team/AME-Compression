@@ -39,6 +39,12 @@ export interface MediaInfo {
 export interface AppSettings {
   language: string
   appearance_mode: 'light' | 'dark' | 'system'
+  accent_color:
+    | 'trust-blue'
+    | 'stable-green'
+    | 'grounded-orange'
+    | 'sophisticated-indigo'
+    | 'clarity-teal'
   ffmpeg_path: string
   default_output_dir: string
 }

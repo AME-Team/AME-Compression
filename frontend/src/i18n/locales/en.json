@@ -10,6 +10,10 @@
     "settings": "Settings",
     "main_navigation": "Main navigation"
   },
+  "coming_soon": {
+    "title": "Coming Soon",
+    "description": "This view is under development."
+  },
   "file": {
     "select": "Select File",
     "select_multiple": "Select Files",
@@ -39,6 +43,11 @@
     "preset": "Encoding Preset",
     "preset_range": "Higher = Faster Encoding",
     "audio_bitrate": "Audio Bitrate",
+    "bitrate_placeholder": "e.g. 192",
+    "custom_width": "Width (W)",
+    "custom_height": "Height (H)",
+    "custom_width_placeholder": "W",
+    "custom_height_placeholder": "H",
     "disable_audio": "Disable Audio",
     "max_resolution": "Max Resolution",
     "max_fps": "Max FPS",
@@ -71,6 +80,7 @@
     "title": "Audio Compression Settings",
     "audio_section": "Audio",
     "bitrate": "Bitrate",
+    "bitrate_placeholder": "e.g. 192",
     "keep_metadata": "Keep Metadata",
     "input_info": "Input File Info",
     "output_preview": "Output Preview"
@@ -154,6 +164,14 @@
     "section_ffmpeg": "FFmpeg",
     "section_output": "Output",
     "section_compression": "Default Compression",
+    "accent_color": "Accent Color",
+    "accent_colors": {
+      "trust-blue": "Trust Blue",
+      "stable-green": "Stable Green",
+      "grounded-orange": "Grounded Orange",
+      "sophisticated-indigo": "Sophisticated Indigo",
+      "clarity-teal": "Clarity Teal"
+    },
     "ffmpeg_mode": "Detection Mode",
     "ffmpeg_auto": "Auto Detect",
     "ffmpeg_manual": "Manual",
@@ -192,7 +210,6 @@
     "error": "Error",
     "warning": "Warning",
     "info": "Information",
-    "loading": "Loading...",
     "none": "None",
     "default": "Default",
     "custom": "Custom",
@@ -203,7 +220,8 @@
     "channels": "{{count}}ch",
     "overwrite": "Overwrite",
     "restart": "Restart",
-    "exit": "Exit"
+    "exit": "Exit",
+    "loading": "Loading..."
   },
   "errors": {
     "ffmpeg_not_found": "FFmpeg not found. Please install FFmpeg or set the path in Settings.",
@@ -257,6 +275,7 @@
   },
   "a11y": {
     "skip_to_content": "Skip to main content",
+    "toggle_dropdown": "Toggle dropdown",
     "drop_zone_label": "Add compression files here (drag and drop or press Enter to add)",
     "comparison_slider": "Before/After comparison slider",
     "before": "Before",
