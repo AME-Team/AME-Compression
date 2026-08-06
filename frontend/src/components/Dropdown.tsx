@@ -40,7 +40,6 @@ const Dropdown: React.FC<DropdownProps> = ({
   const [activeIndex, setActiveIndex] = useState(0)
   const [invalid, setInvalid] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const justSelectedRef = useRef(false)
   const listRef = useRef<HTMLUListElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -87,7 +86,6 @@ const Dropdown: React.FC<DropdownProps> = ({
 
   const selectOption = useCallback(
     (opt: DropdownOption): void => {
-      justSelectedRef.current = true
       onChange(opt.value)
       setInvalid(false)
       close()
@@ -199,12 +197,8 @@ const Dropdown: React.FC<DropdownProps> = ({
   )
 
   const handleEditableBlur = (e: React.FocusEvent<HTMLInputElement>): void => {
-    if (justSelectedRef.current) {
-      justSelectedRef.current = false
-      setOpen(false)
-      return
-    }
-    // フォーカスがドロップダウン内部（オプションやトグル）へ移動した場合は閉じない。
+    // オプション/トグルは onMouseDown preventDefault により blur が発生しないため、
+    // ここに到達する blur は外部クリックや Tab 移動のみ。必ず検証・確定を実行する。
     if (e.relatedTarget instanceof Node && containerRef.current?.contains(e.relatedTarget)) {
       return
     }

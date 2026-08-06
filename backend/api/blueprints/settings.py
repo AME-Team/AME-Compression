@@ -1,4 +1,5 @@
 import time
+from typing import cast
 
 from flask import Blueprint, Response, jsonify, request
 
@@ -36,7 +37,10 @@ def get_settings() -> Response:
 
 @settings_bp.route("", methods=["POST"])
 def update_settings() -> Response | tuple[Response, int]:
-    data = request.json
+    raw_data = request.json
+    if not isinstance(raw_data, dict):
+        return jsonify({"error": "Request body must be a JSON object"}), 400
+    data = cast("dict[str, str | None]", raw_data)
     if not data:
         return jsonify({"error": "No data provided"}), 400
 

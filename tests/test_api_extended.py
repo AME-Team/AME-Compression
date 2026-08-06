@@ -61,6 +61,11 @@ def test_update_settings_invalid_appearance_mode(client: FlaskClient) -> None:
     assert response.status_code == 400
 
 
+def test_update_settings_non_dict_body(client: FlaskClient) -> None:
+    response = client.post("/api/settings", json=["appearance_mode", "dark"])
+    assert response.status_code == 400
+
+
 def test_update_settings_null_values_filtered(client: FlaskClient) -> None:
     response = client.post("/api/settings", json={"appearance_mode": None})
     assert response.status_code == 200
