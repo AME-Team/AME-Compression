@@ -3,11 +3,7 @@ import { useEffect } from 'react'
 export type ThemeMode = 'light' | 'dark' | 'system'
 
 export type AccentColor =
-  | 'trust-blue'
-  | 'stable-green'
-  | 'grounded-orange'
-  | 'sophisticated-indigo'
-  | 'clarity-teal'
+  'trust-blue' | 'stable-green' | 'grounded-orange' | 'sophisticated-indigo' | 'clarity-teal'
 
 // NOTE: この許可集合は backend/api/blueprints/settings.py の VALID_THEME_MODES /
 // VALID_ACCENT_COLORS と常に同期させること（フロントエンドは renderer プロセス、
