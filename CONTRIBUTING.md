@@ -128,6 +128,13 @@ PRコメントでスラッシュコマンドを入力するとCI上でAIレビ�
 - 静的解析エラーが1件でもある場合はCircuit BreakerによりAIレビューがスキップされます。先に静的解析エラーを解消してください。
 - レビューエンジン・モデル・思考量はGitHubリポジトリの **Variables**（`REVIEW_ENGINE` / `REVIEW_MODEL` / `REPLY_MODEL` / `REVIEW_THINKING`）で設定します。認証情報は **Secrets**（`OPENCODE_AUTH_B64` 等）にBase64で登録します。
 
+### 参照バージョン（移動タグとローカル固定）
+
+- ラッパ2件（`review_command.yml` / `review_reply.yml`）はhub（`AME-Team/AME-AI-Review-System`）の移動メジャータグ `v0` を参照します。リリースごとにタグが付け替えられるため、配布先での更新作業は不要です。
+- タグの付け替えはhubの `release.yml` がアセット添付の成功後に行います。不変性が必要な場合は `ame-ai-reviewer init --ref v0.2.16` のようにリリースタグへ固定します（その場合は手作業の更新が必要になります）。
+- Gate 1のwheelは `pyproject.toml` / `uv.lock` に固定します（現在v0.2.16）。CI（Gate 2）は移動タグを参照するため、更新直後はローカルとCIで版がずれ得ます。
+- 追随手順は `pyproject.toml` のwheel URLを書き換えて `uv lock` を実行します。この手順の自動化はhubのIssue #153（`sync` がpyproject / uv.lockを扱えない）で扱います。
+
 ## コーディング規約 (Coding Conventions)
 
 ### Python スタイル
