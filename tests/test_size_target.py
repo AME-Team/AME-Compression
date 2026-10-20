@@ -25,8 +25,12 @@ class TestResolveTargetBytes:
         assert resolve_target_bytes(200 * MB_IN_BYTES, SizeTarget(percent=25.0)) == 50 * MB_IN_BYTES
 
     def test_percent_never_zero(self) -> None:
-        tiny = resolve_target_bytes(10, SizeTarget(percent=0.1))
+        tiny = resolve_target_bytes(10, SizeTarget(percent=1.0))
         assert tiny == 1
+
+    def test_percent_below_minimum_is_rejected(self) -> None:
+        with pytest.raises(TargetSizeError, match="範囲"):
+            resolve_target_bytes(MB_IN_BYTES, SizeTarget(percent=0.5))
 
     def test_both_given_is_rejected(self) -> None:
         with pytest.raises(TargetSizeError, match="どちらか一方"):

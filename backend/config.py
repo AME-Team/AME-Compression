@@ -102,7 +102,7 @@ TARGET_SIZE_MIN_MB = 1
 TARGET_SIZE_MAX_MB = 1024 * 1024  # 1 TB guard rail
 
 # Percentage of the ORIGINAL file size accepted for the percentage mode.
-TARGET_SIZE_PERCENT_MIN = 0.1
+TARGET_SIZE_PERCENT_MIN = 1.0
 TARGET_SIZE_PERCENT_MAX = 100.0
 
 # Two-pass encoding progress split (percent of the whole job spent on pass 1).
