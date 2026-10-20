@@ -28,7 +28,15 @@ class CompressionStatus(Enum):
 
 @dataclass
 class VideoCompressionParams:
-    """Parameters for video compression."""
+    """Parameters for video compression.
+
+    Attributes:
+        compression_mode: ``"crf"`` (quality target) or ``"target_size"``
+            (two-pass VBR towards a byte budget).
+        target_size_bytes: Absolute output size target in bytes.
+        target_size_percent: Output size target as a percentage of the input
+            file size.
+    """
 
     input_path: str | Path
     output_path: str | Path | None = None
@@ -40,6 +48,9 @@ class VideoCompressionParams:
     resolution: str | None = None
     volume_gain_db: str | float | None = None
     denoise_level: float | None = None
+    compression_mode: str = "crf"
+    target_size_bytes: int | None = None
+    target_size_percent: float | None = None
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"
     on_progress: ProgressCallback | None = None
@@ -77,6 +88,8 @@ class ProgressEvent:
         frame: Current frame number
         eta: Estimated time remaining in seconds
         status: Current status message
+        pass_index: Current encoding pass (1-based, 0 when single pass)
+        pass_total: Total number of encoding passes
     """
 
     percent: float = 0.0
@@ -87,6 +100,8 @@ class ProgressEvent:
     frame: int = 0
     eta: float = 0.0
     status: str = ""
+    pass_index: int = 0
+    pass_total: int = 0
 
 
 @dataclass
@@ -138,11 +153,15 @@ class VideoCompressionResult(CompressionResult):
     Attributes:
         width: Output video width
         height: Output video height
-        fps: Output video FPS
+        fps: Output FPS
         video_codec: Video codec used
         audio_codec: Audio codec used
         crf: CRF value used
         preset: Encoding preset used
+        compression_mode: Mode used for the encode
+        video_bitrate_kbps: Video bitrate targeted by the two-pass encode
+        target_size_bytes: Requested output size (0 when not targeting a size)
+        target_size_achieved: Whether the output stayed within the target
     """
 
     width: int | None = None
@@ -152,6 +171,10 @@ class VideoCompressionResult(CompressionResult):
     audio_codec: str = ""
     crf: int = 0
     preset: int = 0
+    compression_mode: str = "crf"
+    video_bitrate_kbps: int = 0
+    target_size_bytes: int = 0
+    target_size_achieved: bool = False
 
 
 @dataclass
