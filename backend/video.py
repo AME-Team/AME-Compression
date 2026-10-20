@@ -463,6 +463,9 @@ def _encode_two_pass(params: VideoCompressionParams, ctx: JobContext) -> EncodeO
 
     passlog_dir = Path(tempfile.mkdtemp(prefix="ame_passlog_"))
     passlogfile = passlog_dir / "pass"
+    # Pass 1 only analyses the clip and runs much faster than the real encode, so
+    # its fps/speed would skew the averages reported for the job; keep them apart.
+    analysis_stats: Stats = {"fps_list": [], "speed_list": [], "frame_list": []}
     try:
         pass1, pass2, scaled_res = _prepare_two_pass_commands(
             params, ctx.video_info, ctx.plan, passlogfile
@@ -470,7 +473,7 @@ def _encode_two_pass(params: VideoCompressionParams, ctx: JobContext) -> EncodeO
         code = _run_ffmpeg(
             pass1,
             params,
-            ctx.stats,
+            analysis_stats,
             ctx.total_duration,
             PassProgress(offset=0.0, span=TWO_PASS_FIRST_PASS_SHARE, index=1, total=2),
         )
@@ -554,6 +557,23 @@ def _failure(message: str, input_path: Path) -> VideoCompressionResult:
     )
 
 
+def _discard_output(params: VideoCompressionParams) -> None:
+    """Remove a partially written output file (best effort).
+
+    A cancelled or failed encode leaves a truncated container behind; keeping it
+    would let the user mistake a broken file for a successful result.
+    """
+    if not params.output_path:
+        return
+    output_path = Path(params.output_path)
+    input_path = Path(params.input_path)
+    # Never delete the source: a caller may (accidentally) point the output at it.
+    if output_path.resolve() == input_path.resolve():
+        return
+    with contextlib.suppress(OSError):
+        output_path.unlink(missing_ok=True)
+
+
 def _finalize(
     params: VideoCompressionParams, ctx: JobContext, outcome: EncodeOutcome
 ) -> VideoCompressionResult:
@@ -563,12 +583,17 @@ def _finalize(
         CompressionError: If the encode did not produce a usable output.
     """
     if outcome.exit_code is None:
+        _discard_output(params)
         return _cancelled_result(params, ctx)
     if outcome.exit_code != 0:
+        _discard_output(params)
         msg = f"{outcome.label} exited with code {outcome.exit_code}"
         raise CompressionError(msg)
 
-    output_path = Path(str(params.output_path))
+    if params.output_path is None:
+        msg = "output path was not resolved before encoding"
+        raise CompressionError(msg)
+    output_path = Path(params.output_path)
     if not output_path.exists():
         msg = "FFmpeg finished but no output file was produced"
         raise CompressionError(msg)
@@ -577,6 +602,15 @@ def _finalize(
 
 def compress_video_service(**kwargs: Any) -> VideoCompressionResult:
     """Compress video using FFmpeg with AV1 codec (service layer)."""
+    # kwargs are caller-supplied (API / CLI), so validate the path before the
+    # dataclass is built: a None here would otherwise raise TypeError in Path().
+    if not kwargs.get("input_path"):
+        return VideoCompressionResult(
+            status=CompressionStatus.FAILED,
+            input_path="",
+            error_message="input_path is required",
+        )
+
     params = VideoCompressionParams(**kwargs)
     input_path = Path(params.input_path)
     try:

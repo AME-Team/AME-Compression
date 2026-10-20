@@ -232,6 +232,46 @@ class TestTwoPassResults:
         assert result.is_failed
         assert "pass 1" in result.error_message
 
+    def test_failure_removes_partial_output(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        source = _touch(tmp_path, "in.mp4", size=20 * MB_IN_BYTES)
+        output = tmp_path / "out.mp4"
+        output.write_bytes(b"partial-data")
+        _patch_video_info(monkeypatch)
+        fake = FakeFFmpeg(codes=[3])
+        monkeypatch.setattr(video, "_run_ffmpeg", fake)
+
+        result = video.compress_video_service(
+            input_path=str(source),
+            output_path=str(output),
+            compression_mode=COMPRESSION_MODE_TARGET_SIZE,
+            target_size_percent=50.0,
+        )
+
+        assert result.is_failed
+        assert not output.exists()
+
+    def test_cancellation_removes_partial_output(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        source = _touch(tmp_path, "in.mp4", size=20 * MB_IN_BYTES)
+        output = tmp_path / "out.mp4"
+        output.write_bytes(b"partial-data")
+        _patch_video_info(monkeypatch)
+        fake = FakeFFmpeg(codes=[0, None])
+        monkeypatch.setattr(video, "_run_ffmpeg", fake)
+
+        result = video.compress_video_service(
+            input_path=str(source),
+            output_path=str(output),
+            compression_mode=COMPRESSION_MODE_TARGET_SIZE,
+            target_size_percent=50.0,
+        )
+
+        assert result.status == CompressionStatus.CANCELLED
+        assert not output.exists()
+
     def test_invalid_target_returns_user_facing_error(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
