@@ -1,6 +1,9 @@
 export type JobStatus = 'starting' | 'running' | 'success' | 'failed' | 'pending'
 export type JobType = 'video' | 'audio'
 
+export type CompressionMode = 'crf' | 'target_size'
+export type TargetSizeMode = 'absolute' | 'percent'
+
 export interface Progress {
   percent: number
   eta: number
@@ -9,6 +12,8 @@ export interface Progress {
   total_duration?: number
   fps?: number
   frame?: number
+  pass_index?: number
+  pass_total?: number
 }
 
 export interface TaskResult {
@@ -16,6 +21,10 @@ export interface TaskResult {
   output_size?: number
   duration?: number
   bitrate?: number
+  compression_mode?: CompressionMode
+  target_size_bytes?: number
+  target_size_achieved?: boolean
+  video_bitrate_kbps?: number
   [key: string]: unknown
 }
 
@@ -34,6 +43,7 @@ export interface MediaInfo {
   width?: number
   height?: number
   bitrate?: number
+  size_bytes?: number | null
 }
 
 export interface AppSettings {

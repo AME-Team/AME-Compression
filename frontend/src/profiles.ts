@@ -1,6 +1,12 @@
+import type { CompressionMode, TargetSizeMode } from './types'
+
 export interface MediaProfile {
   name: string
   mediaType: 'video' | 'audio'
+  compressionMode?: CompressionMode
+  targetSizeMode?: TargetSizeMode
+  targetSizeMb?: string
+  targetSizePercent?: number
   crf: number
   preset: number
   maxResolution: string
@@ -21,6 +27,10 @@ export const PROFILE_STORAGE_KEY = 'ame-media-profiles'
 
 export const DEFAULT_SETTINGS: Omit<MediaProfile, 'name'> = {
   mediaType: 'video',
+  compressionMode: 'crf',
+  targetSizeMode: 'percent',
+  targetSizeMb: '100',
+  targetSizePercent: 50,
   crf: 25,
   preset: 6,
   maxResolution: 'original',

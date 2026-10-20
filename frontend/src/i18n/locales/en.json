@@ -74,7 +74,21 @@
       "120": "120 FPS",
       "144": "144 FPS",
       "240": "240 FPS"
-    }
+    },
+    "compression_mode": "Compression mode",
+    "mode_quality": "Quality (CRF)",
+    "mode_target_size": "Target size",
+    "target_size_mode": "Target size method",
+    "target_size_absolute": "Absolute size",
+    "target_size_percent": "Percentage",
+    "target_size_mb": "Target size (MB)",
+    "target_size_percent_label": "Target size (%)",
+    "target_size_percent_range": "1-100% of the original file size.",
+    "target_size_estimate": "Estimated output: about {{size}}",
+    "source_size": "Original size: {{size}}",
+    "two_pass_hint": "Two-pass encoding: it takes roughly twice as long as a quality encode.",
+    "crf_disabled_in_target_mode": "CRF is not used when targeting a size.",
+    "target_size_invalid": "Enter a target size of at least 1 MB (or 1-100%)."
   },
   "audio_settings": {
     "title": "Audio Compression Settings",
@@ -140,7 +154,10 @@
     "batch_skipped": "{{count}} file(s) skipped",
     "dismiss": "Close",
     "no_jobs": "No active jobs",
-    "process_complete": "Compression process completed."
+    "process_complete": "Compression process completed.",
+    "pass": "Pass {{index}}/{{total}}",
+    "target_achieved": "within target",
+    "target_missed": "over target"
   },
   "settings": {
     "title": "Settings",

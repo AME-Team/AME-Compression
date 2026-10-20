@@ -45,6 +45,8 @@ const JobItem: React.FC<JobItemProps> = ({ job, onCancel, onDismiss }) => {
 
   const statusConfig = STATUS_CONFIG[job.status]
   const statusLabel = statusConfig ? t(statusConfig.labelKey) : job.status
+  const passIndex = job.progress?.pass_index ?? 0
+  const passTotal = job.progress?.pass_total ?? 0
 
   return (
     <div className={`job-item ${job.status}`} role="listitem">
@@ -79,6 +81,14 @@ const JobItem: React.FC<JobItemProps> = ({ job, onCancel, onDismiss }) => {
             </div>
             <span className="progress-percent">{Math.round(job.progress.percent)}%</span>
           </div>
+          {passTotal > 0 && passIndex > 0 && (
+            <span
+              className="progress-pass"
+              aria-label={t('compress.pass', { index: passIndex, total: passTotal })}
+            >
+              {t('compress.pass', { index: passIndex, total: passTotal })}
+            </span>
+          )}
           <div className="job-stats">
             <span className="stat-item">
               <Clock size={10} />
@@ -127,6 +137,23 @@ const JobItem: React.FC<JobItemProps> = ({ job, onCancel, onDismiss }) => {
             <CheckCircle size={12} /> -{job.result.compression_ratio?.toFixed(1)}%{' '}
             {t('compress.reduction')}
           </span>
+          {job.result.compression_mode === 'target_size' &&
+            typeof job.result.target_size_achieved === 'boolean' && (
+              <span
+                className={`result-target ${job.result.target_size_achieved ? 'ok' : 'over'}`}
+                aria-label={t(
+                  job.result.target_size_achieved
+                    ? 'compress.target_achieved'
+                    : 'compress.target_missed',
+                )}
+              >
+                {t(
+                  job.result.target_size_achieved
+                    ? 'compress.target_achieved'
+                    : 'compress.target_missed',
+                )}
+              </span>
+            )}
         </div>
       )}
 

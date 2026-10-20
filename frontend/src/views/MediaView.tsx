@@ -12,7 +12,14 @@ import { Upload, Settings, FileSearch, X, Sparkles } from 'lucide-react'
 import { api } from '../services/api'
 import type { MediaProfile } from '../profiles'
 import { DEFAULT_SETTINGS } from '../profiles'
-import type { QualityAnalysisResult, BatchAnalysisItem, AnalysisMode } from '../types'
+import type {
+  QualityAnalysisResult,
+  BatchAnalysisItem,
+  AnalysisMode,
+  CompressionMode,
+  TargetSizeMode,
+  MediaInfo,
+} from '../types'
 import Dropdown from '../components/Dropdown'
 
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'flac', 'm4a'])
@@ -21,6 +28,12 @@ function detectMediaType(filePath: string): 'video' | 'audio' {
   const ext = filePath.split('.').pop()?.toLowerCase() ?? ''
   if (AUDIO_EXTENSIONS.has(ext)) return 'audio'
   return 'video'
+}
+
+function formatMegabytes(bytes: number): string {
+  const mb = bytes / (1024 * 1024)
+  if (mb >= 1024) return `${(mb / 1024).toFixed(2)} GB`
+  return `${mb.toFixed(2)} MB`
 }
 
 const AUDIO_BITRATE_OPTIONS = [
@@ -228,6 +241,13 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [inputPaths, setInputPaths] = useState<string[]>([])
   const [manualInput, setManualInput] = useState('')
 
+  const [compressionMode, setCompressionMode] = useState<CompressionMode>('crf')
+  const [targetSizeMode, setTargetSizeMode] = useState<TargetSizeMode>('percent')
+  const [targetSizeMb, setTargetSizeMb] = useState('100')
+  const [targetSizePercent, setTargetSizePercent] = useState(50)
+  const [sourceInfo, setSourceInfo] = useState<MediaInfo | null>(null)
+  const [targetSizeError, setTargetSizeError] = useState<string | null>(null)
+
   const [crf, setCrf] = useState(25)
   const [preset, setPreset] = useState(6)
   const [maxResolution, setMaxResolution] = useState('original')
@@ -267,6 +287,10 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const currentSettings: Omit<MediaProfile, 'name'> = useMemo(
     () => ({
       mediaType,
+      compressionMode,
+      targetSizeMode,
+      targetSizeMb,
+      targetSizePercent,
       crf,
       preset,
       maxResolution,
@@ -284,6 +308,10 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     }),
     [
       mediaType,
+      compressionMode,
+      targetSizeMode,
+      targetSizeMb,
+      targetSizePercent,
       crf,
       preset,
       maxResolution,
@@ -303,6 +331,10 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
 
   const applyProfile = useCallback((settings: Omit<MediaProfile, 'name'>): void => {
     setMediaType(settings.mediaType)
+    setCompressionMode(settings.compressionMode ?? 'crf')
+    setTargetSizeMode(settings.targetSizeMode ?? 'percent')
+    setTargetSizeMb(settings.targetSizeMb ?? '100')
+    setTargetSizePercent(settings.targetSizePercent ?? 50)
     setCrf(settings.crf)
     setPreset(settings.preset)
     setMaxResolution(settings.maxResolution)
@@ -415,7 +447,39 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     }
   }, [])
 
+  useEffect(() => {
+    const firstVideo = inputPaths.find((path) => detectMediaType(path) === 'video')
+    if (!firstVideo) {
+      setSourceInfo(null)
+      return
+    }
+    let cancelled = false
+    api
+      .get<MediaInfo>('/media/info', { params: { path: firstVideo } })
+      .then((response) => {
+        if (!cancelled) setSourceInfo(response.data)
+      })
+      .catch(() => {
+        if (!cancelled) setSourceInfo(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [inputPaths])
+
   const startCompression = async (): Promise<void> => {
+    if (compressionMode === 'target_size') {
+      const parsedMb = Number.parseFloat(targetSizeMb)
+      const valid =
+        targetSizeMode === 'percent'
+          ? targetSizePercent >= 1 && targetSizePercent <= 100
+          : Number.isFinite(parsedMb) && parsedMb >= 1
+      if (!valid) {
+        setTargetSizeError(t('video_settings.target_size_invalid'))
+        return
+      }
+    }
+    setTargetSizeError(null)
     setLoading(true)
     setFailedFiles([])
 
@@ -465,6 +529,16 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       return resolvedAudioBitrate
     }
 
+    const parsedTargetMb = Number.parseFloat(targetSizeMb)
+    const resolvedTargetBytes =
+      compressionMode === 'target_size' &&
+      targetSizeMode === 'absolute' &&
+      Number.isFinite(parsedTargetMb)
+        ? Math.round(parsedTargetMb * 1024 * 1024)
+        : null
+    const resolvedTargetPercent =
+      compressionMode === 'target_size' && targetSizeMode === 'percent' ? targetSizePercent : null
+
     const failed: string[] = []
     try {
       for (const inputPath of inputPaths) {
@@ -489,6 +563,9 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                     : null,
               volume_gain_db: volumeGain,
               denoise_level: fileDenoise.enabled ? fileDenoise.level : null,
+              compression_mode: compressionMode,
+              target_size_bytes: resolvedTargetBytes,
+              target_size_percent: resolvedTargetPercent,
             })
             .catch((error) => {
               console.error(`Failed to start compression for ${inputPath}`, error)
@@ -895,6 +972,96 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
             )}
             <div className="settings-grid">
               <div className="setting-item">
+                <label htmlFor="compression-mode">{t('video_settings.compression_mode')}</label>
+                <Dropdown
+                  id="compression-mode"
+                  value={compressionMode}
+                  onChange={(val) => {
+                    setCompressionMode(val === 'target_size' ? 'target_size' : 'crf')
+                  }}
+                  ariaLabel={t('video_settings.compression_mode')}
+                  options={[
+                    { value: 'crf', label: t('video_settings.mode_quality') },
+                    { value: 'target_size', label: t('video_settings.mode_target_size') },
+                  ]}
+                />
+              </div>
+              {compressionMode === 'target_size' && (
+                <div className="setting-item target-size-panel">
+                  <label htmlFor="target-size-mode">{t('video_settings.target_size_mode')}</label>
+                  <Dropdown
+                    id="target-size-mode"
+                    value={targetSizeMode}
+                    onChange={(val) => {
+                      setTargetSizeMode(val === 'absolute' ? 'absolute' : 'percent')
+                    }}
+                    ariaLabel={t('video_settings.target_size_mode')}
+                    options={[
+                      { value: 'percent', label: t('video_settings.target_size_percent') },
+                      { value: 'absolute', label: t('video_settings.target_size_absolute') },
+                    ]}
+                  />
+                  {targetSizeMode === 'absolute' ? (
+                    <input
+                      id="target-size-mb"
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      value={targetSizeMb}
+                      onChange={(e) => {
+                        setTargetSizeMb(e.target.value)
+                        setTargetSizeError(null)
+                      }}
+                      aria-label={t('video_settings.target_size_mb')}
+                    />
+                  ) : (
+                    <>
+                      <input
+                        id="target-size-percent"
+                        type="range"
+                        min="1"
+                        max="100"
+                        step="1"
+                        value={targetSizePercent}
+                        onChange={(e) => {
+                          setTargetSizePercent(parseInt(e.target.value, 10))
+                          setTargetSizeError(null)
+                        }}
+                        aria-label={`${t('video_settings.target_size_percent_label')}: ${targetSizePercent}`}
+                      />
+                      <small>
+                        {t('video_settings.target_size_percent_label')}: {targetSizePercent}%
+                      </small>
+                      <small>{t('video_settings.target_size_percent_range')}</small>
+                    </>
+                  )}
+                  {sourceInfo?.size_bytes ? (
+                    <>
+                      <small>
+                        {t('video_settings.source_size', {
+                          size: formatMegabytes(sourceInfo.size_bytes),
+                        })}
+                      </small>
+                      <small>
+                        {t('video_settings.target_size_estimate', {
+                          size: formatMegabytes(
+                            targetSizeMode === 'percent'
+                              ? (sourceInfo.size_bytes * targetSizePercent) / 100
+                              : (Number.parseFloat(targetSizeMb) || 0) * 1024 * 1024,
+                          ),
+                        })}
+                      </small>
+                    </>
+                  ) : null}
+                  {targetSizeError && (
+                    <small className="setting-error" role="alert">
+                      {targetSizeError}
+                    </small>
+                  )}
+                  <small>{t('video_settings.two_pass_hint')}</small>
+                </div>
+              )}
+              <div className="setting-item">
                 <label htmlFor="crf-slider">
                   {t('video_settings.crf')}: {crf}
                 </label>
@@ -904,13 +1071,17 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                   min="0"
                   max="63"
                   value={crf}
-                  disabled={disableCrf}
+                  disabled={disableCrf || compressionMode === 'target_size'}
                   onChange={(e) => {
                     setCrf(parseInt(e.target.value))
                   }}
                   aria-label={`${t('video_settings.crf')}: ${crf}`}
                 />
-                <small>{t('video_settings.crf_range')}</small>
+                <small>
+                  {compressionMode === 'target_size'
+                    ? t('video_settings.crf_disabled_in_target_mode')
+                    : t('video_settings.crf_range')}
+                </small>
               </div>
               <div className="setting-item">
                 <label htmlFor="preset-slider">
