@@ -26,6 +26,6 @@
     "textlint-rule-preset-japanese": "^10.0.4",
     "textlint-rule-preset-jtf-style": "^3.0.3",
     "textlint-rule-prefer-tari-tari": "^1.0.3",
-    "textlint-rule-prh": "^6.1.0"
+    "textlint-rule-prh": "^6.1.1"
   }
 }
