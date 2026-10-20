@@ -76,6 +76,13 @@ updates:
     commit-message:
       prefix: "build(deps-frontend)"
       include: scope
+    # typescript-eslint は最新版 (8.72.0) でも peer 範囲が ">=4.8.4 <6.1.0" のままで、
+    # TypeScript 7 系を宣言上サポートしていない。TypeScript 7 を取り込むと
+    # `npm ci` が ERESOLVE で失敗し CI (pre-commit --all-files) が落ちるため、
+    # メジャー更新だけを対象外にする。パッチ / マイナー更新は従来どおり提案される。
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       eslint:
         patterns:
