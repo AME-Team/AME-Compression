@@ -230,7 +230,7 @@ class TestTwoPassResults:
         )
 
         assert result.is_failed
-        assert "pass 1" in result.error_message
+        assert "パス 1" in result.error_message
 
     def test_failure_removes_partial_output(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

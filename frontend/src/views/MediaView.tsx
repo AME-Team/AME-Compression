@@ -279,6 +279,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [batchAnalyzing, setBatchAnalyzing] = useState(false)
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
 
+  const videoFileCount = inputPaths.filter((path) => detectMediaType(path) === 'video').length
   const isAnalysisActive = analysisMode !== 'none'
   const disableCrf = isAnalysisActive && (analysisMode === 'all' || analysisMode === 'video')
   const disableAudioSettings =
@@ -1042,6 +1043,9 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                           size: formatMegabytes(sourceInfo.size_bytes),
                         })}
                       </small>
+                      {videoFileCount > 1 && (
+                        <small>{t('video_settings.target_size_estimate_first_file')}</small>
+                      )}
                       <small>
                         {t('video_settings.target_size_estimate', {
                           size: formatMegabytes(

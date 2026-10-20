@@ -88,7 +88,8 @@
     "source_size": "元サイズ: {{size}}",
     "two_pass_hint": "2 パスでエンコードするため、品質優先より約 2 倍の時間がかかります。",
     "crf_disabled_in_target_mode": "容量指定では CRF は使用しません。",
-    "target_size_invalid": "目標サイズは 1MB 以上（または 1〜100%）で指定してください。"
+    "target_size_invalid": "目標サイズは 1MB 以上（または 1〜100%）で指定してください。",
+    "target_size_estimate_first_file": "推定値は先頭の動画ファイルを基準にしています。"
   },
   "audio_settings": {
     "title": "音声圧縮設定",

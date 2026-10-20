@@ -478,7 +478,7 @@ def _encode_two_pass(params: VideoCompressionParams, ctx: JobContext) -> EncodeO
             PassProgress(offset=0.0, span=TWO_PASS_FIRST_PASS_SHARE, index=1, total=2),
         )
         if code is None or code != 0:
-            return EncodeOutcome(code, scaled_res, label="FFmpeg pass 1")
+            return EncodeOutcome(code, scaled_res, label="パス 1 (解析)")
         code = _run_ffmpeg(
             pass2,
             params,
@@ -491,7 +491,7 @@ def _encode_two_pass(params: VideoCompressionParams, ctx: JobContext) -> EncodeO
                 total=2,
             ),
         )
-        return EncodeOutcome(code, scaled_res, label="FFmpeg pass 2")
+        return EncodeOutcome(code, scaled_res, label="パス 2 (本エンコード)")
     finally:
         _remove_passlog(passlogfile)
         with contextlib.suppress(OSError):
@@ -587,7 +587,10 @@ def _finalize(
         return _cancelled_result(params, ctx)
     if outcome.exit_code != 0:
         _discard_output(params)
-        msg = f"{outcome.label} exited with code {outcome.exit_code}"
+        msg = (
+            f"{outcome.label} が異常終了しました (exit code {outcome.exit_code})。"
+            "出力先の空き容量、入力ファイルの破損、FFmpeg のコーデック対応を確認してください。"
+        )
         raise CompressionError(msg)
 
     if params.output_path is None:
