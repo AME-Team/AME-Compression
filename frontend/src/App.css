@@ -1096,6 +1096,44 @@ label.disabled-label,
   font-family: var(--font-ui-mono);
 }
 
+.progress-pass {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-family: var(--font-ui-mono);
+  color: var(--color-primary);
+  background: var(--color-primary-soft, rgba(45, 108, 223, 0.12));
+}
+
+.result-target {
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  font-family: var(--font-ui-mono);
+}
+
+.result-target.ok {
+  color: var(--color-success);
+  background: var(--color-success-soft, rgba(34, 160, 90, 0.14));
+}
+
+.result-target.over {
+  color: var(--color-warning, #b45309);
+  background: rgba(180, 83, 9, 0.14);
+}
+
+.target-size-panel {
+  border-left: 2px solid var(--color-primary);
+  padding-left: 12px;
+}
+
 .job-result {
   margin-top: 8px;
 }

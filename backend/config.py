@@ -81,6 +81,34 @@ CRF_MIN = 0
 CRF_MAX = 63
 
 # ============================================
+# Target Size (Two-Pass VBR) Settings
+# ============================================
+# Compression mode identifiers shared with the API / frontend.
+COMPRESSION_MODE_CRF = "crf"
+COMPRESSION_MODE_TARGET_SIZE = "target_size"
+
+# Container / muxing overhead reserved when converting a byte target into a
+# bitrate budget (mp4 index, container headers, per-track overhead).
+# Measured on a 5 s sample: the 2-pass encode overshot the video+audio
+# budget by roughly 2%, so 3% keeps the delivered file at or below target.
+CONTAINER_OVERHEAD_RATIO = 0.03
+
+# Below this the encoder cannot produce a usable picture; a target that
+# leaves less than this for video is rejected with a user-facing error.
+MIN_VIDEO_BITRATE_KBPS = 50
+
+# Bounds for the absolute target size supplied by the user (megabytes).
+TARGET_SIZE_MIN_MB = 1
+TARGET_SIZE_MAX_MB = 1024 * 1024  # 1 TB guard rail
+
+# Percentage of the ORIGINAL file size accepted for the percentage mode.
+TARGET_SIZE_PERCENT_MIN = 1.0
+TARGET_SIZE_PERCENT_MAX = 100.0
+
+# Two-pass encoding progress split (percent of the whole job spent on pass 1).
+TWO_PASS_FIRST_PASS_SHARE = 50.0
+
+# ============================================
 # Progress Bar Settings
 # ============================================
 PROGRESS_BAR_LENGTH = 30

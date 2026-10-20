@@ -28,16 +28,24 @@ def get_info() -> Response | tuple[Response, int]:
     logger.info("Getting media info for: %s", path)
     _, ffprobe_path = resolve_ffmpeg_paths()
 
+    size_bytes: int | None = None
+    try:
+        size_bytes = path_obj.stat().st_size
+    except OSError:
+        logger.warning("Could not read file size for: %s", path)
+
     info = get_video_info_safe(path_obj, ffprobe_path)
     if info:
         info_dict: dict[str, Any] = info
         info_dict["type"] = "video"
+        info_dict["size_bytes"] = size_bytes
         return jsonify(info_dict)
 
     info = get_audio_info_safe(path_obj, ffprobe_path)
     if info:
         info_dict = info
         info_dict["type"] = "audio"
+        info_dict["size_bytes"] = size_bytes
         return jsonify(info_dict)
 
     logger.warning("Unsupported file format: %s", path)

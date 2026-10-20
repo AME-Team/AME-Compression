@@ -74,7 +74,22 @@
       "120": "120 FPS",
       "144": "144 FPS",
       "240": "240 FPS"
-    }
+    },
+    "compression_mode": "圧縮モード",
+    "mode_quality": "品質優先 (CRF)",
+    "mode_target_size": "容量指定",
+    "target_size_mode": "目標サイズの指定方法",
+    "target_size_absolute": "絶対サイズ",
+    "target_size_percent": "割合",
+    "target_size_mb": "目標サイズ (MB)",
+    "target_size_percent_label": "目標サイズ (%)",
+    "target_size_percent_range": "元ファイルサイズの 1〜100% で指定します。",
+    "target_size_estimate": "推定出力サイズ: 約 {{size}}",
+    "source_size": "元サイズ: {{size}}",
+    "two_pass_hint": "2 パスでエンコードするため、品質優先より約 2 倍の時間がかかります。",
+    "crf_disabled_in_target_mode": "容量指定では CRF は使用しません。",
+    "target_size_invalid": "目標サイズは 1MB 以上（または 1〜100%）で指定してください。",
+    "target_size_estimate_first_file": "推定値は先頭の動画ファイルを基準にしています。"
   },
   "audio_settings": {
     "title": "音声圧縮設定",
@@ -140,7 +155,10 @@
     "batch_skipped": "{{count}} 件スキップ",
     "dismiss": "閉じる",
     "no_jobs": "アクティブなジョブはありません",
-    "process_complete": "圧縮処理が完了しました。"
+    "process_complete": "圧縮処理が完了しました。",
+    "pass": "パス {{index}}/{{total}}",
+    "target_achieved": "目標内",
+    "target_missed": "目標超過"
   },
   "settings": {
     "title": "設定",

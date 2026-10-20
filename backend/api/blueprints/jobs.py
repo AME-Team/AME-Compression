@@ -5,7 +5,9 @@ from typing import Any
 from flask import Blueprint, Response, jsonify, request
 
 from ...audio import compress_audio_service
+from ...config import COMPRESSION_MODE_CRF, COMPRESSION_MODE_TARGET_SIZE
 from ...ffmpeg import resolve_ffmpeg_paths
+from ...size_target import SizeTarget, TargetSizeError, resolve_target_bytes
 from ...video import compress_video_service
 from ..job_runner import job_runner
 
@@ -14,48 +16,152 @@ logger = logging.getLogger(__name__)
 jobs_bp = Blueprint("jobs", __name__)
 
 
-@jobs_bp.route("/video", methods=["POST"])
-def start_video_compression() -> tuple[Response, int]:
-    """Start a video compression task."""
-    data: dict[str, Any] = request.json or {}
+class RequestValidationError(Exception):
+    """Raised when a job request payload is invalid."""
+
+    def __init__(self, message: str, status: int = 400) -> None:
+        super().__init__(message)
+        self.status = status
+
+
+def _resolve_target_fields(
+    data: dict[str, Any], input_path: str, mode: str
+) -> tuple[int | None, float | None]:
+    """Validate the size target fields of a video job request.
+
+    Args:
+        data: Raw JSON payload.
+        input_path: Existing input file path.
+        mode: Requested compression mode.
+
+    Returns:
+        ``(target_size_bytes, target_size_percent)``.
+
+    Raises:
+        RequestValidationError: If the fields are inconsistent or invalid.
+    """
+    target_size_bytes = data.get("target_size_bytes")
+    target_size_percent = data.get("target_size_percent")
+
+    if mode != COMPRESSION_MODE_TARGET_SIZE:
+        if target_size_bytes is not None or target_size_percent is not None:
+            msg = (
+                "target_size_bytes / target_size_percent require "
+                f"compression_mode '{COMPRESSION_MODE_TARGET_SIZE}'"
+            )
+            raise RequestValidationError(msg)
+        return None, None
+
+    if isinstance(target_size_bytes, bool):
+        msg = "目標サイズ (バイト) は整数で指定してください。"
+        raise RequestValidationError(msg)
+    if target_size_bytes is not None and not isinstance(target_size_bytes, int):
+        msg = "目標サイズ (バイト) は整数で指定してください。"
+        raise RequestValidationError(msg)
+    if isinstance(target_size_percent, bool):
+        msg = "割合は数値で指定してください。"
+        raise RequestValidationError(msg)
+    if target_size_percent is not None and not isinstance(target_size_percent, int | float):
+        msg = "割合は数値で指定してください。"
+        raise RequestValidationError(msg)
+
+    target = SizeTarget(
+        size_bytes=target_size_bytes,
+        percent=float(target_size_percent) if target_size_percent is not None else None,
+    )
+    try:
+        resolve_target_bytes(Path(input_path).stat().st_size, target)
+    except TargetSizeError as exc:
+        raise RequestValidationError(str(exc)) from exc
+    except OSError as exc:
+        msg = "Could not read the input file size"
+        raise RequestValidationError(msg) from exc
+    return target.size_bytes, target.percent
+
+
+def _parse_video_request(data: dict[str, Any]) -> dict[str, Any]:
+    """Validate a video compression request and normalise its fields.
+
+    Raises:
+        RequestValidationError: If any field is missing or out of range.
+    """
     input_path = data.get("input_path")
     if not input_path:
-        return jsonify({"error": "input_path is required"}), 400
-
+        msg = "input_path is required"
+        raise RequestValidationError(msg)
     if not Path(input_path).exists():
-        return jsonify({"error": f"Input path does not exist: {input_path}"}), 404
+        msg = f"Input path does not exist: {input_path}"
+        raise RequestValidationError(msg, 404)
 
-    # Simple validation
     max_crf = 63
     max_preset = 13
     crf = data.get("crf")
     if crf is not None and not (0 <= crf <= max_crf):
-        return jsonify({"error": f"CRF must be between 0 and {max_crf}"}), 400
+        msg = f"CRF must be between 0 and {max_crf}"
+        raise RequestValidationError(msg)
 
     preset = data.get("preset")
     if preset is not None and not (0 <= preset <= max_preset):
-        return jsonify({"error": f"Preset must be between 0 and {max_preset}"}), 400
+        msg = f"Preset must be between 0 and {max_preset}"
+        raise RequestValidationError(msg)
+
+    compression_mode = data.get("compression_mode", COMPRESSION_MODE_CRF)
+    if compression_mode not in (COMPRESSION_MODE_CRF, COMPRESSION_MODE_TARGET_SIZE):
+        msg = (
+            f"compression_mode must be '{COMPRESSION_MODE_CRF}' or '{COMPRESSION_MODE_TARGET_SIZE}'"
+        )
+        raise RequestValidationError(msg)
+
+    target_size_bytes, target_size_percent = _resolve_target_fields(
+        data, str(input_path), str(compression_mode)
+    )
+    return {
+        "input_path": input_path,
+        "crf": crf,
+        "preset": preset,
+        "compression_mode": compression_mode,
+        "target_size_bytes": target_size_bytes,
+        "target_size_percent": target_size_percent,
+    }
+
+
+@jobs_bp.route("/video", methods=["POST"])
+def start_video_compression() -> tuple[Response, int]:
+    """Start a video compression task."""
+    data: dict[str, Any] = request.json or {}
+    try:
+        payload = _parse_video_request(data)
+    except RequestValidationError as exc:
+        return jsonify({"error": str(exc)}), exc.status
 
     ffmpeg_path, ffprobe_path = resolve_ffmpeg_paths()
 
     task_id = job_runner.start_task(
         "video",
         compress_video_service,
-        input_path=input_path,
+        input_path=payload["input_path"],
         output_path=data.get("output_path"),
-        crf=crf,
-        preset=preset,
+        crf=payload["crf"],
+        preset=payload["preset"],
         audio_bitrate=data.get("audio_bitrate"),
         audio_enabled=data.get("audio_enabled", True),
         max_fps=data.get("max_fps"),
         resolution=data.get("resolution"),
         volume_gain_db=data.get("volume_gain_db"),
         denoise_level=data.get("denoise_level"),
+        compression_mode=payload["compression_mode"],
+        target_size_bytes=payload["target_size_bytes"],
+        target_size_percent=payload["target_size_percent"],
         ffmpeg_path=ffmpeg_path,
         ffprobe_path=ffprobe_path,
     )
 
-    logger.info("Video compression job started: %s -> %s", task_id[:8], input_path)
+    logger.info(
+        "Video compression job started: %s -> %s (mode=%s)",
+        task_id[:8],
+        payload["input_path"],
+        payload["compression_mode"],
+    )
     return jsonify({"task_id": task_id}), 202
 
 
