@@ -234,9 +234,12 @@ function App(): React.JSX.Element {
     }
   }
 
-  const handleStartCompression = (): void => {
-    setCompressionInitiated(true)
-    void mediaViewRef.current?.startCompression()
+  // Returns whether a job was actually started so a rejected target size keeps
+  // the app idle instead of trapping the user in the progress dialog.
+  const handleStartCompression = async (): Promise<boolean> => {
+    const started = (await mediaViewRef.current?.startCompression()) ?? false
+    setCompressionInitiated(started)
+    return started
   }
 
   const handleCancelJob = (id: string): void => {
@@ -273,7 +276,9 @@ function App(): React.JSX.Element {
           setCommandPaletteOpen(false)
         }}
         onNavigate={setActiveView}
-        onStartCompression={handleStartCompression}
+        onStartCompression={() => {
+          void handleStartCompression()
+        }}
         onApplyDefaults={() => {
           mediaViewRef.current?.applyDefaults()
         }}

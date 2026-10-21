@@ -29,5 +29,8 @@
     "noPropertyAccessFromIndexSignature": true,
     "useUnknownInCatchVariables": true
   },
-  "include": ["vite.config.ts", "electron"]
+  // Unit tests live next to the code they cover. They import modules with a
+  // .ts extension because the Node ESM loader requires it; the
+  // `allowImportingTsExtensions` option above covers the tsc side.
+  "include": ["vite.config.ts", "electron", "src/**/*.test.ts"]
 }
