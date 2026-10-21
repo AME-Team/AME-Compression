@@ -36,7 +36,7 @@ function useClickOutside(
 }
 
 interface FloatingBarProps {
-  onStartCompression: () => void
+  onStartCompression: () => Promise<boolean>
   compressionDisabled: boolean
   isCompressing: boolean
   jobs: Job[]
@@ -309,10 +309,16 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
   const runningJobs = jobs.filter((j) => j.status === 'running' || j.status === 'starting')
   const hasJobs = jobs.length > 0
 
+  // Open the progress dialog only after a job actually started; a target size
+  // rejected by client-side validation must not leave an empty modal open.
+  const startCompressionThenOpenProgress = async (): Promise<void> => {
+    const started = await onStartCompression()
+    if (started) setProgressModalOpen(true)
+  }
+
   const handleStartClick = (): void => {
-    setProgressModalOpen(true)
     setProfileModalOpen(false)
-    onStartCompression()
+    void startCompressionThenOpenProgress()
   }
 
   useFocusTrap(profileModalRef, profileModalOpen)

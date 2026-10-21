@@ -64,6 +64,27 @@ jobs:
           if-no-files-found: ignore
 
   # ---------------------------------------------------------------------------
+  # Frontend — Node built-in test runner for pure UI helpers
+  # No install step: the tests import only node:test / node:assert.
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: frontend tests (node --test)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Run helper tests
+        working-directory: frontend
+        run: npm run test
+
+  # ---------------------------------------------------------------------------
   # pip-audit — scan installed Python packages for known CVEs
   # ---------------------------------------------------------------------------
   pip-audit:

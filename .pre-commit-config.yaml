@@ -279,6 +279,12 @@ repos:
         language: system
         files: ^frontend/.*\.(ts|tsx|js|jsx|css|scss|html|json)$
         pass_filenames: true
+      - id: frontend-test
+        name: "node --test (frontend unit tests)"
+        entry: npm --prefix frontend run test
+        language: system
+        files: ^frontend/src/.*\.(ts|tsx)$
+        pass_filenames: false
 
   # ===========================================================================
   # 15. Tests — pytest (only on push to avoid slow local commits)

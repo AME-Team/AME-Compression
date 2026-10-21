@@ -21,6 +21,15 @@ import type {
   MediaInfo,
 } from '../types'
 import Dropdown from '../components/Dropdown'
+import {
+  TARGET_SIZE_PERCENT_DEFAULT,
+  TARGET_SIZE_PERCENT_MAX,
+  TARGET_SIZE_PERCENT_MIN,
+  clampTargetPercent,
+  isValidTargetPercent,
+  parseTargetPercent,
+  roundTargetPercent,
+} from '../utils/targetSize'
 
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'flac', 'm4a'])
 
@@ -220,7 +229,13 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
 }
 
 export interface MediaViewHandle {
-  startCompression: () => Promise<void>
+  /**
+   * Validate the current settings and start the compression jobs.
+   *
+   * Resolves to true only when at least one job was accepted by the API, so
+   * callers do not open the progress dialog for a rejected request.
+   */
+  startCompression: () => Promise<boolean>
   getCurrentSettings: () => Omit<MediaProfile, 'name'>
   applyProfile: (settings: Omit<MediaProfile, 'name'>) => void
   applyDefaults: () => void
@@ -244,9 +259,24 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [compressionMode, setCompressionMode] = useState<CompressionMode>('crf')
   const [targetSizeMode, setTargetSizeMode] = useState<TargetSizeMode>('percent')
   const [targetSizeMb, setTargetSizeMb] = useState('100')
-  const [targetSizePercent, setTargetSizePercent] = useState(50)
+  const [targetSizePercent, setTargetSizePercent] = useState('50')
   const [sourceInfo, setSourceInfo] = useState<MediaInfo | null>(null)
   const [targetSizeError, setTargetSizeError] = useState<string | null>(null)
+
+  // The range input cannot represent an empty value, so the typed string is the
+  // single source of truth: the slider, the profile and the API payload are all
+  // derived from it.
+  const parsedTargetPercent = parseTargetPercent(targetSizePercent)
+  const roundedTargetPercent = roundTargetPercent(parsedTargetPercent)
+  const sliderTargetPercent = clampTargetPercent(roundedTargetPercent)
+  const [lastValidPercent, setLastValidPercent] = useState(TARGET_SIZE_PERCENT_DEFAULT)
+  useEffect(() => {
+    if (isValidTargetPercent(roundedTargetPercent)) setLastValidPercent(roundedTargetPercent)
+  }, [roundedTargetPercent])
+  // An invalid draft must not overwrite the saved profile with the fallback.
+  const profileTargetPercent = isValidTargetPercent(roundedTargetPercent)
+    ? roundedTargetPercent
+    : lastValidPercent
 
   const [crf, setCrf] = useState(25)
   const [preset, setPreset] = useState(6)
@@ -291,7 +321,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       compressionMode,
       targetSizeMode,
       targetSizeMb,
-      targetSizePercent,
+      targetSizePercent: profileTargetPercent,
       crf,
       preset,
       maxResolution,
@@ -312,7 +342,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       compressionMode,
       targetSizeMode,
       targetSizeMb,
-      targetSizePercent,
+      profileTargetPercent,
       crf,
       preset,
       maxResolution,
@@ -335,7 +365,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     setCompressionMode(settings.compressionMode ?? 'crf')
     setTargetSizeMode(settings.targetSizeMode ?? 'percent')
     setTargetSizeMb(settings.targetSizeMb ?? '100')
-    setTargetSizePercent(settings.targetSizePercent ?? 50)
+    setTargetSizePercent(String(settings.targetSizePercent ?? TARGET_SIZE_PERCENT_DEFAULT))
     setCrf(settings.crf)
     setPreset(settings.preset)
     setMaxResolution(settings.maxResolution)
@@ -468,16 +498,31 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     }
   }, [inputPaths])
 
-  const startCompression = async (): Promise<void> => {
+  const commitTargetPercentInput = (): void => {
+    if (!isValidTargetPercent(roundedTargetPercent)) {
+      setTargetSizeError(t('video_settings.target_size_percent_invalid'))
+      return
+    }
+    setTargetSizePercent(String(roundedTargetPercent))
+    setTargetSizeError(null)
+  }
+
+  const startCompression = async (): Promise<boolean> => {
     if (compressionMode === 'target_size') {
       const parsedMb = Number.parseFloat(targetSizeMb)
       const valid =
         targetSizeMode === 'percent'
-          ? targetSizePercent >= 1 && targetSizePercent <= 100
+          ? isValidTargetPercent(roundedTargetPercent)
           : Number.isFinite(parsedMb) && parsedMb >= 1
       if (!valid) {
-        setTargetSizeError(t('video_settings.target_size_invalid'))
-        return
+        setTargetSizeError(
+          t(
+            targetSizeMode === 'percent'
+              ? 'video_settings.target_size_percent_invalid'
+              : 'video_settings.target_size_invalid',
+          ),
+        )
+        return false
       }
     }
     setTargetSizeError(null)
@@ -538,9 +583,14 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         ? Math.round(parsedTargetMb * 1024 * 1024)
         : null
     const resolvedTargetPercent =
-      compressionMode === 'target_size' && targetSizeMode === 'percent' ? targetSizePercent : null
+      compressionMode === 'target_size' &&
+      targetSizeMode === 'percent' &&
+      isValidTargetPercent(roundedTargetPercent)
+        ? roundedTargetPercent
+        : null
 
     const failed: string[] = []
+    let startedCount = 0
     try {
       for (const inputPath of inputPaths) {
         const detectedType = detectMediaType(inputPath)
@@ -548,8 +598,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         const fileDenoise = getPerFileDenoise(inputPath)
 
         if (detectedType === 'video') {
-          await api
-            .post<{ task_id: string }>('/jobs/video', {
+          try {
+            await api.post<{ task_id: string }>('/jobs/video', {
               input_path: inputPath,
               crf: fileCrf,
               preset,
@@ -568,30 +618,33 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               target_size_bytes: resolvedTargetBytes,
               target_size_percent: resolvedTargetPercent,
             })
-            .catch((error) => {
-              console.error(`Failed to start compression for ${inputPath}`, error)
-              failed.push(inputPath)
-            })
+            startedCount += 1
+          } catch (error) {
+            console.error(`Failed to start compression for ${inputPath}`, error)
+            failed.push(inputPath)
+          }
         } else {
           const fileAudioBitrate = getPerFileAudioBitrate(inputPath)
-          await api
-            .post<{ task_id: string }>('/jobs/audio', {
+          try {
+            await api.post<{ task_id: string }>('/jobs/audio', {
               input_path: inputPath,
               bitrate: fileAudioBitrate,
               keep_metadata: keepMetadata,
               volume_gain_db: volumeGain,
               denoise_level: fileDenoise.enabled ? fileDenoise.level : null,
             })
-            .catch((error) => {
-              console.error(`Failed to start compression for ${inputPath}`, error)
-              failed.push(inputPath)
-            })
+            startedCount += 1
+          } catch (error) {
+            console.error(`Failed to start compression for ${inputPath}`, error)
+            failed.push(inputPath)
+          }
         }
       }
     } finally {
       if (failed.length > 0) setFailedFiles(failed)
       setLoading(false)
     }
+    return startedCount > 0
   }
 
   const handleAnalyzeQuality = async (): Promise<void> => {
@@ -1017,23 +1070,43 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                     />
                   ) : (
                     <>
-                      <input
-                        id="target-size-percent"
-                        type="range"
-                        min="1"
-                        max="100"
-                        step="1"
-                        value={targetSizePercent}
-                        onChange={(e) => {
-                          setTargetSizePercent(parseInt(e.target.value, 10))
-                          setTargetSizeError(null)
-                        }}
-                        aria-label={`${t('video_settings.target_size_percent_label')}: ${targetSizePercent}`}
-                      />
-                      <small>
-                        {t('video_settings.target_size_percent_label')}: {targetSizePercent}%
+                      <div className="target-size-percent-row">
+                        <input
+                          id="target-size-percent-slider"
+                          type="range"
+                          min={TARGET_SIZE_PERCENT_MIN}
+                          max={TARGET_SIZE_PERCENT_MAX}
+                          step="1"
+                          value={sliderTargetPercent}
+                          onChange={(e) => {
+                            setTargetSizePercent(e.target.value)
+                            setTargetSizeError(null)
+                          }}
+                          aria-label={`${t('video_settings.target_size_percent_label')}: ${sliderTargetPercent}`}
+                        />
+                        <div className="target-size-percent-input">
+                          <input
+                            id="target-size-percent-input"
+                            type="number"
+                            inputMode="numeric"
+                            min={TARGET_SIZE_PERCENT_MIN}
+                            max={TARGET_SIZE_PERCENT_MAX}
+                            step="1"
+                            value={targetSizePercent}
+                            onChange={(e) => {
+                              setTargetSizePercent(e.target.value)
+                              setTargetSizeError(null)
+                            }}
+                            onBlur={commitTargetPercentInput}
+                            aria-label={t('video_settings.target_size_percent_label')}
+                            aria-describedby="target-size-percent-hint"
+                          />
+                          <span aria-hidden="true">%</span>
+                        </div>
+                      </div>
+                      <small id="target-size-percent-hint">
+                        {t('video_settings.target_size_percent_range')}
                       </small>
-                      <small>{t('video_settings.target_size_percent_range')}</small>
                     </>
                   )}
                   {sourceInfo?.size_bytes ? (
@@ -1050,7 +1123,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                         {t('video_settings.target_size_estimate', {
                           size: formatMegabytes(
                             targetSizeMode === 'percent'
-                              ? (sourceInfo.size_bytes * targetSizePercent) / 100
+                              ? (sourceInfo.size_bytes * sliderTargetPercent) / 100
                               : (Number.parseFloat(targetSizeMb) || 0) * 1024 * 1024,
                           ),
                         })}

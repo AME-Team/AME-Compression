@@ -84,6 +84,7 @@
     "target_size_mb": "目標サイズ (MB)",
     "target_size_percent_label": "目標サイズ (%)",
     "target_size_percent_range": "元ファイルサイズの 1〜100% で指定します。",
+    "target_size_percent_invalid": "目標サイズの割合は 1〜100% で指定してください。",
     "target_size_estimate": "推定出力サイズ: 約 {{size}}",
     "source_size": "元サイズ: {{size}}",
     "two_pass_hint": "2 パスでエンコードするため、品質優先より約 2 倍の時間がかかります。",
