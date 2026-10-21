@@ -91,6 +91,7 @@ function App(): React.JSX.Element {
   const [compressionDisabled, setCompressionDisabled] = useState(true)
   const [compressionLoading, setCompressionLoading] = useState(false)
   const [compressionInitiated, setCompressionInitiated] = useState(false)
+  const [progressModalOpen, setProgressModalOpen] = useState(false)
   const [currentSettings, setCurrentSettings] = useState<Omit<MediaProfile, 'name'> | null>(null)
 
   const visibleJobs = jobs.filter((job) => !dismissedJobIds.has(job.id))
@@ -235,10 +236,13 @@ function App(): React.JSX.Element {
   }
 
   // Returns whether a job was actually started so a rejected target size keeps
-  // the app idle instead of trapping the user in the progress dialog.
+  // the app idle instead of trapping the user in the progress dialog. Only the
+  // open state lives here; FloatingBar still renders the dialog, and every entry
+  // point (floating bar, command palette) drives the same state.
   const handleStartCompression = async (): Promise<boolean> => {
     const started = (await mediaViewRef.current?.startCompression()) ?? false
     setCompressionInitiated(started)
+    if (started) setProgressModalOpen(true)
     return started
   }
 
@@ -256,6 +260,8 @@ function App(): React.JSX.Element {
       {isMediaView && currentSettings && (
         <FloatingBar
           onStartCompression={handleStartCompression}
+          progressModalOpen={progressModalOpen}
+          onProgressModalChange={setProgressModalOpen}
           compressionDisabled={compressionDisabled}
           isCompressing={isCompressing}
           jobs={visibleJobs}
@@ -277,6 +283,8 @@ function App(): React.JSX.Element {
         }}
         onNavigate={setActiveView}
         onStartCompression={() => {
+          // The palette neither renders the progress dialog nor keeps focus, so
+          // the result is dropped; handleStartCompression opens the dialog.
           void handleStartCompression()
         }}
         onApplyDefaults={() => {

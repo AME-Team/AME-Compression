@@ -37,6 +37,8 @@ function useClickOutside(
 
 interface FloatingBarProps {
   onStartCompression: () => Promise<boolean>
+  progressModalOpen: boolean
+  onProgressModalChange: (open: boolean) => void
   compressionDisabled: boolean
   isCompressing: boolean
   jobs: Job[]
@@ -255,6 +257,8 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
   jobs,
   onCancelJob,
   onDismissJob,
+  progressModalOpen,
+  onProgressModalChange,
   currentSettings,
   onApplyProfile,
   onApplyDefaults,
@@ -262,7 +266,6 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
   const { t } = useTranslation()
   const { showToast } = useToast()
   const [profileModalOpen, setProfileModalOpen] = useState(false)
-  const [progressModalOpen, setProgressModalOpen] = useState(false)
   const [confirmState, setConfirmState] = useState<ConfirmState>(INITIAL_CONFIRM_STATE)
   const profileModalRef = useRef<HTMLDivElement>(null)
   const progressModalRef = useRef<HTMLDivElement>(null)
@@ -295,8 +298,8 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
   }, [])
 
   const closeProgressModal = useCallback((): void => {
-    setProgressModalOpen(false)
-  }, [])
+    onProgressModalChange(false)
+  }, [onProgressModalChange])
 
   useClickOutside(profileModalRef, profileModalOpen, closeProfileModal, '[data-profile-trigger]')
   useClickOutside(
@@ -309,16 +312,11 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
   const runningJobs = jobs.filter((j) => j.status === 'running' || j.status === 'starting')
   const hasJobs = jobs.length > 0
 
-  // Open the progress dialog only after a job actually started; a target size
-  // rejected by client-side validation must not leave an empty modal open.
-  const startCompressionThenOpenProgress = async (): Promise<void> => {
-    const started = await onStartCompression()
-    if (started) setProgressModalOpen(true)
-  }
-
   const handleStartClick = (): void => {
     setProfileModalOpen(false)
-    void startCompressionThenOpenProgress()
+    // App opens the progress dialog only when a job was accepted, so a rejected
+    // target size never leaves an empty modal behind.
+    void onStartCompression()
   }
 
   useFocusTrap(profileModalRef, profileModalOpen)
@@ -332,7 +330,7 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
             className="floating-bar-btn"
             onClick={() => {
               setProfileModalOpen(!profileModalOpen)
-              if (!isCompressing) setProgressModalOpen(false)
+              if (!isCompressing) onProgressModalChange(false)
             }}
             disabled={isCompressing}
             aria-haspopup="dialog"
@@ -347,7 +345,7 @@ const FloatingBar: React.FC<FloatingBarProps> = ({
             className="floating-bar-btn"
             onClick={() => {
               if (isCompressing && progressModalOpen) return
-              setProgressModalOpen(!progressModalOpen)
+              onProgressModalChange(!progressModalOpen)
               setProfileModalOpen(false)
             }}
             data-progress-trigger

@@ -58,6 +58,8 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
       icon: <Play size={16} />,
       action: () => {
         onStartCompression()
+        // Close first so the progress dialog the action opens is not covered by
+        // the palette overlay.
         onClose()
       },
     },
