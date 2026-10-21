@@ -91,7 +91,16 @@ function App(): React.JSX.Element {
   const [compressionDisabled, setCompressionDisabled] = useState(true)
   const [compressionLoading, setCompressionLoading] = useState(false)
   const [compressionInitiated, setCompressionInitiated] = useState(false)
+  const [progressModalOpen, setProgressModalOpen] = useState(false)
+  const activeViewRef = useRef(activeView)
   const [currentSettings, setCurrentSettings] = useState<Omit<MediaProfile, 'name'> | null>(null)
+
+  // Leaving the media view unmounts FloatingBar, so drop the open flag instead of
+  // replaying a stale dialog when the user comes back.
+  useEffect(() => {
+    activeViewRef.current = activeView
+    if (activeView !== 'media') setProgressModalOpen(false)
+  }, [activeView])
 
   const visibleJobs = jobs.filter((job) => !dismissedJobIds.has(job.id))
   const hasRunningJobs = jobs.some((j) => j.status === 'running' || j.status === 'starting')
@@ -235,10 +244,15 @@ function App(): React.JSX.Element {
   }
 
   // Returns whether a job was actually started so a rejected target size keeps
-  // the app idle instead of trapping the user in the progress dialog.
+  // the app idle instead of trapping the user in the progress dialog. Only the
+  // open state lives here; FloatingBar still renders the dialog, and every entry
+  // point (floating bar, command palette) drives the same state.
   const handleStartCompression = async (): Promise<boolean> => {
     const started = (await mediaViewRef.current?.startCompression()) ?? false
     setCompressionInitiated(started)
+    // The await can span a view switch: only open the dialog if the media view is
+    // still on screen, otherwise the effect above has already cleared the flag.
+    if (started && activeViewRef.current === 'media') setProgressModalOpen(true)
     return started
   }
 
@@ -256,6 +270,8 @@ function App(): React.JSX.Element {
       {isMediaView && currentSettings && (
         <FloatingBar
           onStartCompression={handleStartCompression}
+          progressModalOpen={progressModalOpen}
+          onProgressModalChange={setProgressModalOpen}
           compressionDisabled={compressionDisabled}
           isCompressing={isCompressing}
           jobs={visibleJobs}
@@ -277,6 +293,8 @@ function App(): React.JSX.Element {
         }}
         onNavigate={setActiveView}
         onStartCompression={() => {
+          // The palette neither renders the progress dialog nor keeps focus, so
+          // the result is dropped; handleStartCompression opens the dialog.
           void handleStartCompression()
         }}
         onApplyDefaults={() => {
