@@ -92,11 +92,13 @@ function App(): React.JSX.Element {
   const [compressionLoading, setCompressionLoading] = useState(false)
   const [compressionInitiated, setCompressionInitiated] = useState(false)
   const [progressModalOpen, setProgressModalOpen] = useState(false)
+  const activeViewRef = useRef(activeView)
   const [currentSettings, setCurrentSettings] = useState<Omit<MediaProfile, 'name'> | null>(null)
 
   // Leaving the media view unmounts FloatingBar, so drop the open flag instead of
   // replaying a stale dialog when the user comes back.
   useEffect(() => {
+    activeViewRef.current = activeView
     if (activeView !== 'media') setProgressModalOpen(false)
   }, [activeView])
 
@@ -248,7 +250,9 @@ function App(): React.JSX.Element {
   const handleStartCompression = async (): Promise<boolean> => {
     const started = (await mediaViewRef.current?.startCompression()) ?? false
     setCompressionInitiated(started)
-    if (started) setProgressModalOpen(true)
+    // The await can span a view switch: only open the dialog if the media view is
+    // still on screen, otherwise the effect above has already cleared the flag.
+    if (started && activeViewRef.current === 'media') setProgressModalOpen(true)
     return started
   }
 
