@@ -9,7 +9,9 @@ import pytest
 from backend.api.app import create_app
 from backend.api.blueprints import jobs as jobs_blueprint
 from backend.api.job_runner import job_runner
+from backend.models import VideoCompressionParams
 from backend.size_target import MB_IN_BYTES, SizeTarget, TargetSizeError, resolve_target_bitrate
+from backend.video import resolve_target_plan
 from flask.testing import FlaskClient
 
 
@@ -183,6 +185,7 @@ def test_target_size_rejects_budget_below_minimum_video_bitrate(
             duration=600.0,
             audio_bitrate="192k",
             target=SizeTarget(percent=40.0),
+            audio_enabled=True,
         )
     assert response.status_code == 400
     assert response.get_json()["error"] == str(excinfo.value)
@@ -210,3 +213,53 @@ def test_unreadable_media_falls_back_to_job_time_validation(
 
     assert response.status_code == 202
     start.assert_called_once()
+
+
+def test_job_path_reports_the_same_budget_error(
+    client: FlaskClient, source_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The request check and the job-time plan must reject with one message."""
+    monkeypatch.setattr(jobs_blueprint, "get_video_info_safe", _fake_video_info)
+    monkeypatch.setattr(job_runner, "start_task", MagicMock(return_value="unused"))
+
+    response = _post(
+        client,
+        {
+            "input_path": str(source_file),
+            "compression_mode": "target_size",
+            "target_size_percent": 40,
+            "audio_bitrate": "192k",
+        },
+    )
+    assert response.status_code == 400
+
+    params = VideoCompressionParams(
+        input_path=source_file,
+        compression_mode="target_size",
+        target_size_percent=40.0,
+        audio_bitrate="192k",
+        audio_enabled=True,
+    )
+    with pytest.raises(TargetSizeError) as excinfo:
+        resolve_target_plan(params, source_file.stat().st_size, 600.0)
+
+    assert response.get_json()["error"] == str(excinfo.value)
+
+
+def test_plan_is_identical_for_equivalent_audio_inputs() -> None:
+    """'192K', '192k' and '192' must all resolve to the same bitrate plan."""
+    plans = [
+        resolve_target_plan(
+            VideoCompressionParams(
+                input_path="input.mp4",
+                compression_mode="target_size",
+                target_size_percent=40.0,
+                audio_bitrate=value,
+            ),
+            100 * MB_IN_BYTES,
+            60.0,
+        )
+        for value in ("192k", "192K", "192")
+    ]
+    assert len({(plan.audio_kbps, plan.video_kbps) for plan in plans}) == 1
+    assert plans[0].audio_kbps == 192

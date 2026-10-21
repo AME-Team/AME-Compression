@@ -10,6 +10,8 @@ from dataclasses import dataclass
 
 from .config import (
     CONTAINER_OVERHEAD_RATIO,
+    DEFAULT_AUDIO_BITRATE,
+    MAX_AUDIO_BITRATE,
     MIN_VIDEO_BITRATE_KBPS,
     TARGET_SIZE_MAX_MB,
     TARGET_SIZE_MIN_MB,
@@ -23,6 +25,7 @@ __all__ = [
     "SizeTarget",
     "TargetBitratePlan",
     "TargetSizeError",
+    "resolve_audio_bitrate_for_budget",
     "resolve_target_bitrate",
     "resolve_target_bytes",
 ]
@@ -129,6 +132,23 @@ def resolve_target_bytes(input_size: int, target: SizeTarget) -> int:
     return _validate_percent(input_size, target.percent)
 
 
+def resolve_audio_bitrate_for_budget(raw_audio_bitrate: str | int | float | None) -> str:
+    """Return the audio bitrate both the request layer and the job layer budget with.
+
+    Applies the same default (``DEFAULT_AUDIO_BITRATE``) and the same ceiling
+    (``MAX_AUDIO_BITRATE``) as the encoder, and always returns a lower-case
+    ``kbps`` string so the value is valid both for the budget math and as an
+    FFmpeg ``-b:a`` argument. ``parse_bitrate`` raises ``ValueError`` for input
+    that is not a bitrate at all; callers turn that into a user-facing error.
+    """
+    text = DEFAULT_AUDIO_BITRATE if raw_audio_bitrate is None else str(raw_audio_bitrate).strip()
+    if text == "":
+        text = DEFAULT_AUDIO_BITRATE
+    kbps = parse_bitrate(text)
+    kbps = min(kbps, MAX_AUDIO_BITRATE)
+    return f"{kbps}k"
+
+
 def resolve_target_bitrate(
     input_size: int,
     duration: float | None,
@@ -166,11 +186,10 @@ def resolve_target_bitrate(
 
     audio_kbps = 0
     if audio_enabled:
-        raw_audio = audio_bitrate if audio_bitrate is not None else "192k"
         try:
-            audio_kbps = parse_bitrate(str(raw_audio))
+            audio_kbps = parse_bitrate(resolve_audio_bitrate_for_budget(audio_bitrate))
         except (TypeError, ValueError) as exc:
-            msg = f"オーディオビットレートの値が不正です: {raw_audio!r}"
+            msg = f"オーディオビットレートの値が不正です: {audio_bitrate!r}"
             raise TargetSizeError(msg) from exc
 
     video_kbps = int(available_kbps - audio_kbps)
