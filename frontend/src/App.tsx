@@ -94,6 +94,12 @@ function App(): React.JSX.Element {
   const [progressModalOpen, setProgressModalOpen] = useState(false)
   const [currentSettings, setCurrentSettings] = useState<Omit<MediaProfile, 'name'> | null>(null)
 
+  // Leaving the media view unmounts FloatingBar, so drop the open flag instead of
+  // replaying a stale dialog when the user comes back.
+  useEffect(() => {
+    if (activeView !== 'media') setProgressModalOpen(false)
+  }, [activeView])
+
   const visibleJobs = jobs.filter((job) => !dismissedJobIds.has(job.id))
   const hasRunningJobs = jobs.some((j) => j.status === 'running' || j.status === 'starting')
   const isCompressing = compressionInitiated || compressionLoading || hasRunningJobs
