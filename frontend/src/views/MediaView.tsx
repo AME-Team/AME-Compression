@@ -28,6 +28,7 @@ import {
   clampTargetPercent,
   isValidTargetPercent,
   parseTargetPercent,
+  roundTargetPercent,
 } from '../utils/targetSize'
 
 const AUDIO_EXTENSIONS = new Set(['mp3', 'wav', 'flac', 'm4a'])
@@ -228,6 +229,12 @@ const AudioSettingsSection: React.FC<AudioSettingsSectionProps> = ({
 }
 
 export interface MediaViewHandle {
+  /**
+   * Validate the current settings and start the compression jobs.
+   *
+   * Resolves to true only when at least one job was accepted by the API, so
+   * callers do not open the progress dialog for a rejected request.
+   */
   startCompression: () => Promise<boolean>
   getCurrentSettings: () => Omit<MediaProfile, 'name'>
   applyProfile: (settings: Omit<MediaProfile, 'name'>) => void
@@ -260,10 +267,16 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   // single source of truth: the slider, the profile and the API payload are all
   // derived from it.
   const parsedTargetPercent = parseTargetPercent(targetSizePercent)
-  const sliderTargetPercent = clampTargetPercent(parsedTargetPercent)
-  const profileTargetPercent = isValidTargetPercent(parsedTargetPercent)
-    ? parsedTargetPercent
-    : TARGET_SIZE_PERCENT_DEFAULT
+  const roundedTargetPercent = roundTargetPercent(parsedTargetPercent)
+  const sliderTargetPercent = clampTargetPercent(roundedTargetPercent)
+  const [lastValidPercent, setLastValidPercent] = useState(TARGET_SIZE_PERCENT_DEFAULT)
+  useEffect(() => {
+    if (isValidTargetPercent(roundedTargetPercent)) setLastValidPercent(roundedTargetPercent)
+  }, [roundedTargetPercent])
+  // An invalid draft must not overwrite the saved profile with the fallback.
+  const profileTargetPercent = isValidTargetPercent(roundedTargetPercent)
+    ? roundedTargetPercent
+    : lastValidPercent
 
   const [crf, setCrf] = useState(25)
   const [preset, setPreset] = useState(6)
@@ -486,15 +499,11 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   }, [inputPaths])
 
   const commitTargetPercentInput = (): void => {
-    const parsed = parseTargetPercent(targetSizePercent)
-    if (!isValidTargetPercent(parsed)) {
+    if (!isValidTargetPercent(roundedTargetPercent)) {
       setTargetSizeError(t('video_settings.target_size_percent_invalid'))
       return
     }
-    // Percentage granularity is 1%, matching the slider step; decimals are
-    // rounded rather than rejected so the profile, the slider and the payload
-    // always agree.
-    setTargetSizePercent(String(Math.round(parsed)))
+    setTargetSizePercent(String(roundedTargetPercent))
     setTargetSizeError(null)
   }
 
@@ -503,7 +512,7 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       const parsedMb = Number.parseFloat(targetSizeMb)
       const valid =
         targetSizeMode === 'percent'
-          ? isValidTargetPercent(parsedTargetPercent)
+          ? isValidTargetPercent(roundedTargetPercent)
           : Number.isFinite(parsedMb) && parsedMb >= 1
       if (!valid) {
         setTargetSizeError(
@@ -576,11 +585,12 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     const resolvedTargetPercent =
       compressionMode === 'target_size' &&
       targetSizeMode === 'percent' &&
-      isValidTargetPercent(parsedTargetPercent)
-        ? parsedTargetPercent
+      isValidTargetPercent(roundedTargetPercent)
+        ? roundedTargetPercent
         : null
 
     const failed: string[] = []
+    let startedCount = 0
     try {
       for (const inputPath of inputPaths) {
         const detectedType = detectMediaType(inputPath)
@@ -588,8 +598,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         const fileDenoise = getPerFileDenoise(inputPath)
 
         if (detectedType === 'video') {
-          await api
-            .post<{ task_id: string }>('/jobs/video', {
+          try {
+            await api.post<{ task_id: string }>('/jobs/video', {
               input_path: inputPath,
               crf: fileCrf,
               preset,
@@ -608,31 +618,33 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               target_size_bytes: resolvedTargetBytes,
               target_size_percent: resolvedTargetPercent,
             })
-            .catch((error) => {
-              console.error(`Failed to start compression for ${inputPath}`, error)
-              failed.push(inputPath)
-            })
+            startedCount += 1
+          } catch (error) {
+            console.error(`Failed to start compression for ${inputPath}`, error)
+            failed.push(inputPath)
+          }
         } else {
           const fileAudioBitrate = getPerFileAudioBitrate(inputPath)
-          await api
-            .post<{ task_id: string }>('/jobs/audio', {
+          try {
+            await api.post<{ task_id: string }>('/jobs/audio', {
               input_path: inputPath,
               bitrate: fileAudioBitrate,
               keep_metadata: keepMetadata,
               volume_gain_db: volumeGain,
               denoise_level: fileDenoise.enabled ? fileDenoise.level : null,
             })
-            .catch((error) => {
-              console.error(`Failed to start compression for ${inputPath}`, error)
-              failed.push(inputPath)
-            })
+            startedCount += 1
+          } catch (error) {
+            console.error(`Failed to start compression for ${inputPath}`, error)
+            failed.push(inputPath)
+          }
         }
       }
     } finally {
       if (failed.length > 0) setFailedFiles(failed)
       setLoading(false)
     }
-    return true
+    return startedCount > 0
   }
 
   const handleAnalyzeQuality = async (): Promise<void> => {

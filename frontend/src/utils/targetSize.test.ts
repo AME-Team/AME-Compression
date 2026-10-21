@@ -7,6 +7,7 @@ import {
   clampTargetPercent,
   isValidTargetPercent,
   parseTargetPercent,
+  roundTargetPercent,
 } from './targetSize.ts'
 
 void test('range constants match the backend contract', () => {
@@ -26,6 +27,14 @@ void test('parseTargetPercent rejects empty and non-numeric input', () => {
   assert.equal(parseTargetPercent('   '), null)
   assert.equal(parseTargetPercent('abc'), null)
   assert.equal(parseTargetPercent('12,5'), null)
+})
+
+void test('roundTargetPercent applies whole-percent granularity', () => {
+  assert.equal(roundTargetPercent(12.5), 13)
+  assert.equal(roundTargetPercent(12.4), 12)
+  assert.equal(roundTargetPercent(100.4), 100)
+  assert.equal(roundTargetPercent(0.4), 0)
+  assert.equal(roundTargetPercent(null), null)
 })
 
 void test('isValidTargetPercent enforces the 1-100 range', () => {

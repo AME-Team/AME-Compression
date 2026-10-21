@@ -16,13 +16,26 @@ export const TARGET_SIZE_PERCENT_DEFAULT = 50
  * Parse a percentage typed by the user.
  *
  * Returns null for empty or non-numeric input so the caller can show a
- * validation error instead of silently sending an unintended value.
+ * validation error instead of silently sending an unintended value. Decimals
+ * are parsed as-is; roundTargetPercent applies the UI's whole-percent
+ * granularity on every send path.
  */
 export function parseTargetPercent(raw: string): number | null {
   const trimmed = raw.trim()
   if (trimmed === '') return null
   const value = Number(trimmed)
   return Number.isFinite(value) ? value : null
+}
+
+/**
+ * Round a parsed percentage to the whole percent the UI exposes.
+ *
+ * The slider step, the persisted profile and the API payload all use this
+ * value, so typing 12.5 and leaving the field with Enter, blur or the command
+ * palette always sends 13.
+ */
+export function roundTargetPercent(value: number | null): number | null {
+  return value === null ? null : Math.round(value)
 }
 
 /** True when the parsed percentage is inside the range the backend accepts. */
