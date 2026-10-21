@@ -10,6 +10,7 @@ from backend.size_target import (
     MB_IN_BYTES,
     SizeTarget,
     TargetSizeError,
+    resolve_audio_bitrate_for_budget,
     resolve_target_bitrate,
     resolve_target_bytes,
 )
@@ -132,3 +133,24 @@ class TestResolveTargetBitrate:
                 audio_bitrate="192k",
                 target=SizeTarget(size_bytes=MB_IN_BYTES),
             )
+
+
+class TestResolveAudioBitrateForBudget:
+    def test_default_when_unspecified(self) -> None:
+        assert resolve_audio_bitrate_for_budget(None) == "192k"
+
+    def test_keeps_supported_bitrate(self) -> None:
+        assert resolve_audio_bitrate_for_budget("128k") == "128k"
+
+    def test_bare_numbers_become_kbps(self) -> None:
+        # The value reaches FFmpeg as -b:a, where a unit-less number means bits/s.
+        assert resolve_audio_bitrate_for_budget(128) == "128k"
+        assert resolve_audio_bitrate_for_budget("320") == "320k"
+        assert resolve_audio_bitrate_for_budget("192K") == "192k"
+
+    def test_blank_value_falls_back_to_default(self) -> None:
+        assert resolve_audio_bitrate_for_budget("") == "192k"
+
+    def test_clamps_to_supported_maximum(self) -> None:
+        # The request check and the job check must budget with the same ceiling.
+        assert resolve_audio_bitrate_for_budget("999k") == "320k"

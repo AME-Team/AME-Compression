@@ -22,9 +22,7 @@ from typing import Any
 from .config import (
     AUDIO_CODEC,
     COMPRESSION_MODE_TARGET_SIZE,
-    DEFAULT_AUDIO_BITRATE,
     DEFAULT_CRF,
-    MAX_AUDIO_BITRATE,
     TWO_PASS_FIRST_PASS_SHARE,
     VIDEO_CODEC,
     VIDEO_PRESET,
@@ -44,11 +42,11 @@ from .size_target import (
     SizeTarget,
     TargetBitratePlan,
     TargetSizeError,
+    resolve_audio_bitrate_for_budget,
     resolve_target_bitrate,
 )
 from .utils import (
     calculate_scaled_resolution,
-    parse_bitrate,
 )
 from .volume import (
     analyze_volume_level,
@@ -60,6 +58,7 @@ __all__ = [
     "analyze_volume_service",
     "compress_video_service",
     "get_video_info_safe",
+    "resolve_target_plan",
 ]
 
 # Statistics accumulated while an encode runs (average speed / fps reporting).
@@ -216,12 +215,7 @@ def _build_video_filters(params: VideoCompressionParams, video_info: dict[str, A
 
 def _resolve_audio_bitrate(params: VideoCompressionParams) -> str:
     """Return the effective audio bitrate, clamped to the supported maximum."""
-    audio_bitrate = (
-        params.audio_bitrate if params.audio_bitrate is not None else DEFAULT_AUDIO_BITRATE
-    )
-    if parse_bitrate(audio_bitrate) > MAX_AUDIO_BITRATE:
-        return f"{MAX_AUDIO_BITRATE}k"
-    return audio_bitrate
+    return resolve_audio_bitrate_for_budget(params.audio_bitrate)
 
 
 def _prepare_audio_args(params: VideoCompressionParams) -> list[str]:
@@ -399,10 +393,14 @@ def _average(values: list[float]) -> float:
     return sum(values) / len(values) if values else 0.0
 
 
-def _resolve_plan(
+def resolve_target_plan(
     params: VideoCompressionParams, input_size: int, total_duration: float
 ) -> TargetBitratePlan:
-    """Resolve the two-pass bitrate plan for a target-size request."""
+    """Resolve the two-pass bitrate plan for a target-size request.
+
+    Public so the API layer and the tests can assert that the job-time check
+    rejects an unreachable target with the same message as the request check.
+    """
     return resolve_target_bitrate(
         input_size=input_size,
         duration=total_duration,
@@ -442,7 +440,7 @@ def _build_context(params: VideoCompressionParams) -> JobContext:
 
     if params.compression_mode == COMPRESSION_MODE_TARGET_SIZE:
         try:
-            ctx.plan = _resolve_plan(params, ctx.input_size, ctx.total_duration)
+            ctx.plan = resolve_target_plan(params, ctx.input_size, ctx.total_duration)
         except TargetSizeError as exc:
             raise CompressionError(str(exc)) from exc
     return ctx

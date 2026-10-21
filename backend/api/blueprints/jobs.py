@@ -6,8 +6,13 @@ from flask import Blueprint, Response, jsonify, request
 
 from ...audio import compress_audio_service
 from ...config import COMPRESSION_MODE_CRF, COMPRESSION_MODE_TARGET_SIZE
-from ...ffmpeg import resolve_ffmpeg_paths
-from ...size_target import SizeTarget, TargetSizeError, resolve_target_bytes
+from ...ffmpeg import get_video_info_safe, resolve_ffmpeg_paths
+from ...size_target import (
+    SizeTarget,
+    TargetSizeError,
+    resolve_target_bitrate,
+    resolve_target_bytes,
+)
 from ...video import compress_video_service
 from ..job_runner import job_runner
 
@@ -24,10 +29,41 @@ class RequestValidationError(Exception):
         self.status = status
 
 
+def _resolve_target_duration(input_path: str) -> float | None:
+    """Return the duration used to validate the target-size bitrate budget.
+
+    Probing is best-effort: an unreadable file or a probe that cannot start
+    returns None. The request then reaches the job runner, where
+    ``backend/video.py::_resolve_plan`` calls ``resolve_target_bitrate`` again
+    and raises the identical ``TargetSizeError`` message, so skipping the
+    request-time check never lets an unreachable target slip through silently.
+    """
+    try:
+        _, ffprobe_path = resolve_ffmpeg_paths()
+        info = get_video_info_safe(input_path, ffprobe_path)
+    except (OSError, ValueError, TypeError, KeyError, IndexError, RuntimeError) as exc:
+        # Launching the probe can fail with OSError, and parsing its CSV output
+        # raises ValueError/TypeError/KeyError/IndexError on unexpected shapes.
+        # None keeps the request alive; the job runner re-checks the budget.
+        logger.warning("Could not probe %s for target-size validation: %s", input_path, exc)
+        return None
+    if not info:
+        return None
+    duration = info.get("duration")
+    if isinstance(duration, bool) or not isinstance(duration, int | float):
+        return None
+    return float(duration) if duration > 0 else None
+
+
 def _resolve_target_fields(
     data: dict[str, Any], input_path: str, mode: str
 ) -> tuple[int | None, float | None]:
     """Validate the size target fields of a video job request.
+
+    The byte target is checked against the input size, and — when ffprobe can
+    read the duration — against the minimum video bitrate the encoder needs.
+    Rejecting an unreachable target here keeps the UI from starting a job that
+    would fail immediately.
 
     Args:
         data: Raw JSON payload.
@@ -70,12 +106,28 @@ def _resolve_target_fields(
         percent=float(target_size_percent) if target_size_percent is not None else None,
     )
     try:
-        resolve_target_bytes(Path(input_path).stat().st_size, target)
+        input_size = Path(input_path).stat().st_size
+        resolve_target_bytes(input_size, target)
     except TargetSizeError as exc:
         raise RequestValidationError(str(exc)) from exc
     except OSError as exc:
         msg = "Could not read the input file size"
         raise RequestValidationError(msg) from exc
+
+    duration = _resolve_target_duration(input_path)
+    if duration is not None:
+        try:
+            resolve_target_bitrate(
+                input_size=input_size,
+                duration=duration,
+                audio_bitrate=data.get("audio_bitrate"),
+                target=target,
+                audio_enabled=bool(data.get("audio_enabled", True)),
+            )
+        except TargetSizeError as exc:
+            # The API returns user-facing Japanese messages verbatim (there is
+            # no i18n layer in the backend); the frontend renders `error` as-is.
+            raise RequestValidationError(str(exc)) from exc
     return target.size_bytes, target.percent
 
 
