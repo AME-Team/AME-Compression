@@ -131,8 +131,8 @@ PRコメントでスラッシュコマンドを入力するとCI上でAIレビ�
 ### 参照バージョン（移動タグとローカル固定）
 
 - ラッパ2件（`review_command.yml` / `review_reply.yml`）はhub（`AME-Team/AME-AI-Review-System`）の移動メジャータグ `v0` を参照します。リリースごとにタグが付け替えられるため、配布先での更新作業は不要です。
-- タグの付け替えはhubの `release.yml` がアセット添付の成功後に行います。不変性が必要な場合は `ame-ai-reviewer init --ref v0.2.20` のようにリリースタグへ固定します（その場合は手作業の更新が必要になります）。
-- Gate 1のwheelは `pyproject.toml` / `uv.lock` に固定します（現在v0.2.20）。CI（Gate 2）は移動タグを参照するため、更新直後はローカルとCIで版がずれ得ます。
+- タグの付け替えはhubの `release.yml` がアセット添付の成功後に行います。不変性が必要な場合は `ame-ai-reviewer init --ref v0.2.21` のようにリリースタグへ固定します（その場合は手作業の更新が必要になります）。
+- Gate 1のwheelは `pyproject.toml` / `uv.lock` に固定します（現在v0.2.21）。CI（Gate 2）は移動タグを参照するため、更新直後はローカルとCIで版がずれ得ます。
 - 追随は `ame-ai-reviewer sync` で行います（`sync --check` は差分確認のみ、差分ありexit 1 / 判定不能exit 2）。
 
 ## コーディング規約 (Coding Conventions)
