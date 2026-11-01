@@ -90,7 +90,14 @@
     "two_pass_hint": "Two-pass encoding: it takes roughly twice as long as a quality encode.",
     "crf_disabled_in_target_mode": "CRF is not used when targeting a size.",
     "target_size_invalid": "Enter a target size of at least 1 MB (or 1-100%).",
-    "target_size_estimate_first_file": "The estimate is based on the first video file."
+    "target_size_estimate_first_file": "The estimate is based on the first video file.",
+    "source_label": "Source",
+    "bit_rate_estimated": "{{value}} (estimated)",
+    "quality_options": "Encode quality options",
+    "visual_tuning": "Perceptual quality tuning (tune=0:enable-qm=1)",
+    "visual_tuning_hint": "Spends bits on the edges, texture and shading the eye follows instead of raising PSNR. Sharper detail at the same file size.",
+    "ten_bit": "Encode in 10-bit",
+    "ten_bit_hint": "Keeps 4x finer internal precision, which suppresses banding in gradients and rounding drift. Off keeps the source bit depth."
   },
   "audio_settings": {
     "title": "Audio Compression Settings",

@@ -42,7 +42,16 @@ export interface MediaInfo {
   duration: number
   width?: number
   height?: number
+  fps?: number
   bitrate?: number
+  /** Video bit rate in bits per second; absent when probing failed. */
+  bit_rate?: number | null
+  /** True when bit_rate did not come from the video stream itself. */
+  bit_rate_estimated?: boolean
+  /** Colour depth derived from the pixel format (8, 10, 12, ...). */
+  bit_depth?: number | null
+  pix_fmt?: string | null
+  codec_name?: string
   size_bytes?: number | null
 }
 

@@ -5,7 +5,12 @@ from typing import Any
 from flask import Blueprint, Response, jsonify, request
 
 from ...audio import compress_audio_service
-from ...config import COMPRESSION_MODE_CRF, COMPRESSION_MODE_TARGET_SIZE
+from ...config import (
+    COMPRESSION_MODE_CRF,
+    COMPRESSION_MODE_TARGET_SIZE,
+    DEFAULT_TEN_BIT,
+    DEFAULT_VISUAL_TUNING,
+)
 from ...ffmpeg import get_video_info_safe, resolve_ffmpeg_paths
 from ...size_target import (
     SizeTarget,
@@ -131,6 +136,34 @@ def _resolve_target_fields(
     return target.size_bytes, target.percent
 
 
+def _parse_bool_field(data: dict[str, Any], key: str, default: bool) -> bool:
+    """Read an optional boolean field of a job request.
+
+    ``bool("false")`` is True, so a non-boolean JSON value is rejected instead
+    of being coerced into the opposite setting.
+
+    Args:
+        data: Raw JSON payload.
+        key: Field name.
+        default: Value used when the field is absent or null.
+
+    Returns:
+        The requested boolean.
+
+    Raises:
+        RequestValidationError: If the field is present and not a boolean.
+            Defined at module level above and converted to an HTTP 400 JSON
+            response by ``start_video_compression``.
+    """
+    value = data.get(key)
+    if value is None:
+        return default
+    if not isinstance(value, bool):
+        msg = f"{key} must be a boolean"
+        raise RequestValidationError(msg)
+    return value
+
+
 def _parse_video_request(data: dict[str, Any]) -> dict[str, Any]:
     """Validate a video compression request and normalise its fields.
 
@@ -174,6 +207,8 @@ def _parse_video_request(data: dict[str, Any]) -> dict[str, Any]:
         "compression_mode": compression_mode,
         "target_size_bytes": target_size_bytes,
         "target_size_percent": target_size_percent,
+        "visual_tuning": _parse_bool_field(data, "visual_tuning", DEFAULT_VISUAL_TUNING),
+        "ten_bit": _parse_bool_field(data, "ten_bit", DEFAULT_TEN_BIT),
     }
 
 
@@ -181,6 +216,9 @@ def _parse_video_request(data: dict[str, Any]) -> dict[str, Any]:
 def start_video_compression() -> tuple[Response, int]:
     """Start a video compression task."""
     data: dict[str, Any] = request.json or {}
+    # Every RequestValidationError raised by the parsers below (including
+    # _parse_bool_field) is a client error and is answered with HTTP 400 here;
+    # it never reaches the 500 handler.
     try:
         payload = _parse_video_request(data)
     except RequestValidationError as exc:
@@ -204,6 +242,8 @@ def start_video_compression() -> tuple[Response, int]:
         compression_mode=payload["compression_mode"],
         target_size_bytes=payload["target_size_bytes"],
         target_size_percent=payload["target_size_percent"],
+        visual_tuning=payload["visual_tuning"],
+        ten_bit=payload["ten_bit"],
         ffmpeg_path=ffmpeg_path,
         ffprobe_path=ffprobe_path,
     )

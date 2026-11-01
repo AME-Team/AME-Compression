@@ -4,12 +4,17 @@ import contextlib
 import json
 import logging
 import platform
+import re
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, cast
 
 logger = logging.getLogger(__name__)
+
+# Bit depth suffix of an FFmpeg pixel format name: ``p10le``, ``p16be``,
+# ``f32le``. A name without a depth suffix (``yuv420p``, ``nv12``) is 8-bit.
+_PIX_FMT_DEPTH = re.compile(r"(?:p|f)(\d+)")
 
 
 def _get_executable_names() -> tuple[str, str]:
@@ -258,7 +263,7 @@ def get_detailed_media_info(
         )
         data = cast(dict[str, Any], json.loads(result.stdout))
         return data
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, OSError):
         return None
     except json.JSONDecodeError:
         return None
@@ -480,6 +485,158 @@ def get_video_info_safe(
         return info
 
     return None
+
+
+def get_pix_fmt_bit_depth(pix_fmt: str | None) -> int | None:
+    """Return the bit depth encoded in an FFmpeg pixel format name.
+
+    ``yuv420p`` and ``nv12`` carry no depth suffix and are 8-bit by
+    convention, ``yuv420p10le`` and ``p010le`` are 10-bit, ``grayf32le`` is
+    32-bit.
+
+    Args:
+        pix_fmt: Pixel format name as reported by ffprobe.
+
+    Returns:
+        The bit depth, or ``None`` when no pixel format is known.
+    """
+    if not pix_fmt:
+        return None
+    match = _PIX_FMT_DEPTH.search(pix_fmt)
+    return int(match.group(1)) if match else 8
+
+
+def _positive_int(value: Any) -> int | None:
+    """Parse a positive integer from ffprobe output, or return ``None``."""
+    try:
+        parsed = int(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _positive_float(value: Any) -> float | None:
+    """Parse a positive float from ffprobe output, or return ``None``."""
+    try:
+        parsed = float(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _resolve_video_bit_rate(
+    video_stream: dict[str, Any],
+    fmt_info: dict[str, Any],
+    media_path: Path,
+    duration: float | None,
+) -> tuple[int | None, bool]:
+    """Resolve the bit rate of a video stream.
+
+    Args:
+        video_stream: ffprobe video stream dictionary.
+        fmt_info: ffprobe format dictionary.
+        media_path: Media file used for the size-based fallback.
+        duration: Known media duration in seconds, if any.
+
+    Returns:
+        ``(bits_per_second, estimated)``. ``estimated`` is True whenever the
+        value did not come from the video stream itself: the container bit
+        rate is computed by the demuxer from file size and duration, and the
+        last resort (file size x 8 / duration) covers every stream.
+    """
+    parsed = _positive_int(video_stream.get("bit_rate"))
+    if parsed is not None:
+        return parsed, False
+
+    parsed = _positive_int(fmt_info.get("bit_rate"))
+    if parsed is not None:
+        return parsed, True
+
+    if duration is None:
+        return None, False
+    try:
+        size = media_path.stat().st_size
+    except OSError:
+        return None, False
+    if size <= 0:
+        return None, False
+    return int(size * 8 / duration), True
+
+
+def _parse_frame_rate(value: Any) -> float | None:
+    """Parse ffprobe's ``num/den`` frame rate into a float."""
+    if not isinstance(value, str) or not value:
+        return None
+    if "/" in value:
+        numerator, _, denominator = value.partition("/")
+        num = _positive_float(numerator)
+        den = _positive_float(denominator)
+        if num is None or den is None:
+            return None
+        rate = num / den
+        return rate if rate > 0 else None
+    return _positive_float(value)
+
+
+def get_video_stream_details(
+    video_path: str | Path, ffprobe_path: str = "ffprobe"
+) -> dict[str, Any] | None:
+    """Probe the first video stream for its geometry, depth and bit rate.
+
+    One ffprobe invocation supplies everything the media-info endpoint needs,
+    so the request never pays for a second probe. Matroska and some other
+    containers store no per-stream bit rate, so the container bit rate is used
+    next, and as a last resort the file size divided by the duration.
+    ``bit_rate_estimated`` is True for both fallbacks so the UI can mark the
+    figure as an approximation.
+
+    Args:
+        video_path: Path to the media file.
+        ffprobe_path: Path to the ffprobe executable.
+
+    Returns:
+        A dict with ``width``, ``height``, ``fps``, ``duration``, ``bit_rate``
+        (bits per second, ``None`` when unknown), ``bit_rate_estimated``,
+        ``bit_depth``, ``pix_fmt``, ``codec_name`` and ``profile``; ``None``
+        when no video stream can be read.
+    """
+    detailed = get_detailed_media_info(video_path, ffprobe_path)
+    if not detailed:
+        return None
+
+    streams = cast(list[dict[str, Any]], detailed.get("streams", []))
+    video_stream = next((s for s in streams if s.get("codec_type") == "video"), None)
+    if video_stream is None:
+        return None
+
+    fmt_info = cast(dict[str, Any], detailed.get("format", {}))
+    duration = _positive_float(video_stream.get("duration")) or _positive_float(
+        fmt_info.get("duration")
+    )
+    bit_rate, estimated = _resolve_video_bit_rate(
+        video_stream, fmt_info, Path(video_path), duration
+    )
+
+    pix_fmt = video_stream.get("pix_fmt")
+    bit_depth = get_pix_fmt_bit_depth(pix_fmt if isinstance(pix_fmt, str) else None)
+    raw_depth = video_stream.get("bits_per_raw_sample")
+    if isinstance(raw_depth, str) and raw_depth.isdigit():
+        bit_depth = int(raw_depth)
+
+    codec_name = video_stream.get("codec_name")
+    profile = video_stream.get("profile")
+    return {
+        "width": _positive_int(video_stream.get("width")),
+        "height": _positive_int(video_stream.get("height")),
+        "fps": _parse_frame_rate(video_stream.get("r_frame_rate")),
+        "duration": duration,
+        "bit_rate": bit_rate,
+        "bit_rate_estimated": estimated,
+        "bit_depth": bit_depth,
+        "pix_fmt": pix_fmt if isinstance(pix_fmt, str) else None,
+        "codec_name": codec_name if isinstance(codec_name, str) else "",
+        "profile": profile if isinstance(profile, str) else "",
+    }
 
 
 def get_audio_info_safe(

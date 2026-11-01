@@ -23,6 +23,8 @@ from .config import (
     AUDIO_CODEC,
     COMPRESSION_MODE_TARGET_SIZE,
     DEFAULT_CRF,
+    PIX_FMT_10BIT,
+    SVT_AV1_VISUAL_TUNING_PARAMS,
     TWO_PASS_FIRST_PASS_SHARE,
     VIDEO_CODEC,
     VIDEO_PRESET,
@@ -238,12 +240,42 @@ def _prepare_audio_args(params: VideoCompressionParams) -> list[str]:
 
 
 def _video_codec_args(params: VideoCompressionParams, video_kbps: int | None) -> list[str]:
-    """Build codec arguments for CRF (``video_kbps is None``) or VBR encoding."""
+    """Build codec arguments for CRF (``video_kbps is None``) or VBR encoding.
+
+    The perceptual tuning and pixel-format arguments are appended here so the
+    two-pass passes share them: statistics written by pass 1 only apply to
+    pass 2 when both use the same encoder settings.
+    """
     preset = params.preset if params.preset is not None else VIDEO_PRESET
+    args = ["-c:v", VIDEO_CODEC]
     if video_kbps is None:
         crf = params.crf if params.crf is not None else DEFAULT_CRF
-        return ["-c:v", VIDEO_CODEC, "-crf", str(crf), "-b:v", "0", "-preset", str(preset)]
-    return ["-c:v", VIDEO_CODEC, "-b:v", f"{video_kbps}k", "-preset", str(preset)]
+        args.extend(["-crf", str(crf), "-b:v", "0"])
+    else:
+        args.extend(["-b:v", f"{video_kbps}k"])
+    args.extend(["-preset", str(preset)])
+    args.extend(_visual_tuning_args(params))
+    args.extend(_pixel_format_args(params))
+    return args
+
+
+def _visual_tuning_args(params: VideoCompressionParams) -> list[str]:
+    """Return the SVT-AV1 perceptual tuning arguments (empty when disabled)."""
+    if not params.visual_tuning:
+        return []
+    return ["-svtav1-params", ":".join(SVT_AV1_VISUAL_TUNING_PARAMS)]
+
+
+def _pixel_format_args(params: VideoCompressionParams) -> list[str]:
+    """Return the 10-bit pixel format argument, or nothing to keep the source depth.
+
+    libsvtav1 accepts only 4:2:0 formats (``yuv420p`` / ``yuv420p10le``), so a
+    4:2:2 or 4:4:4 source is converted to 4:2:0 whether or not this option is
+    enabled; the flag changes the bit depth only.
+    """
+    if not params.ten_bit:
+        return []
+    return ["-pix_fmt", PIX_FMT_10BIT]
 
 
 def _prepare_video_command(
@@ -525,6 +557,8 @@ def _success_result(
         video_bitrate_kbps=plan.video_kbps if plan else 0,
         target_size_bytes=plan.target_bytes if plan else 0,
         target_size_achieved=output_size <= plan.target_bytes if plan else False,
+        visual_tuning=params.visual_tuning,
+        ten_bit=params.ten_bit,
         metadata={
             "avg_fps": _average(ctx.stats["fps_list"]),
             "avg_speed": _average(ctx.stats["speed_list"]),

@@ -90,7 +90,14 @@
     "two_pass_hint": "2 パスでエンコードするため、品質優先より約 2 倍の時間がかかります。",
     "crf_disabled_in_target_mode": "容量指定では CRF は使用しません。",
     "target_size_invalid": "目標サイズは 1MB 以上（または 1〜100%）で指定してください。",
-    "target_size_estimate_first_file": "推定値は先頭の動画ファイルを基準にしています。"
+    "target_size_estimate_first_file": "推定値は先頭の動画ファイルを基準にしています。",
+    "source_label": "ソース",
+    "bit_rate_estimated": "{{value}}（推定）",
+    "quality_options": "エンコード品質オプション",
+    "visual_tuning": "視覚品質チューニング (tune=0:enable-qm=1)",
+    "visual_tuning_hint": "PSNR を上げる代わりに、視線が集まる輪郭・質感・陰影へビットを配分します。同じファイルサイズでディテールが鮮明になります。",
+    "ten_bit": "10-bit でエンコード",
+    "ten_bit_hint": "内部演算の精度が 4 倍になり、グラデーションの階調飛びと丸め誤差を抑えます。オフの場合はソースの bit depth をそのまま使います。"
   },
   "audio_settings": {
     "title": "音声圧縮設定",
