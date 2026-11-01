@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Bit depth suffix of an FFmpeg pixel format name: ``p10le``, ``p16be``,
 # ``f32le``. A name without a depth suffix (``yuv420p``, ``nv12``) is 8-bit.
-_PIX_FMT_DEPTH = re.compile(r"(?:p|f)(\d+)")
+_PIX_FMT_DEPTH = re.compile(r"(?:p|f)(\d{1,2})(?:le|be)?$")
 
 # Packed/XYZ formats carry the depth as thousands (``rgb30`` = 3x10 bits) or in
 # the name itself, so the suffix pattern above cannot see it.
@@ -32,6 +32,36 @@ _PIX_FMT_DEPTH_MAP: dict[str, int] = {
     "gbr30": 10,
     "xyz12le": 12,
     "xyz12be": 12,
+    # Semi-planar / packed formats whose names end in three digits (or none at
+    # all), which the p/f suffix pattern cannot read: p210 is 10-bit, not 210.
+    "p010le": 10,
+    "p010be": 10,
+    "p210le": 10,
+    "p210be": 10,
+    "p410le": 10,
+    "p410be": 10,
+    "p012le": 12,
+    "p012be": 12,
+    "p212le": 12,
+    "p212be": 12,
+    "p412le": 12,
+    "p412be": 12,
+    "p016le": 16,
+    "p016be": 16,
+    "p216le": 16,
+    "p216be": 16,
+    "p416le": 16,
+    "p416be": 16,
+    "v210": 10,
+    "v410": 10,
+    "r210": 10,
+    # Single-plane greyscale formats carry the depth in the suffix.
+    "gray10le": 10,
+    "gray10be": 10,
+    "gray12le": 12,
+    "gray12be": 12,
+    "gray16le": 16,
+    "gray16be": 16,
     # Packed YUV 4:2:2 with 10/12/16-bit components.
     "y210le": 10,
     "y210be": 10,
@@ -53,6 +83,17 @@ _PIX_FMT_DEPTH_MAP: dict[str, int] = {
     "rgb555be": 8,
     "bgr555le": 8,
     "bgr555be": 8,
+}
+
+# Bare names (``p010``) are accepted as aliases of their ``le``/``be`` twins,
+# so an ffprobe build that omits the endianness suffix still reports the depth.
+_PIX_FMT_DEPTH_LOOKUP: dict[str, int] = {
+    **{
+        name[:-2]: depth
+        for name, depth in _PIX_FMT_DEPTH_MAP.items()
+        if name.endswith(("le", "be"))
+    },
+    **_PIX_FMT_DEPTH_MAP,
 }
 
 
@@ -465,7 +506,7 @@ def get_pix_fmt_bit_depth(pix_fmt: str | None) -> int | None:
     """
     if not pix_fmt:
         return None
-    known = _PIX_FMT_DEPTH_MAP.get(pix_fmt)
+    known = _PIX_FMT_DEPTH_LOOKUP.get(pix_fmt)
     if known is not None:
         return known
     match = _PIX_FMT_DEPTH.search(pix_fmt)

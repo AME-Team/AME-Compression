@@ -119,6 +119,17 @@ class TestPixelFormatBitDepth:
         # Packed formats carry no p/f suffix and are covered by the lookup table.
         assert get_pix_fmt_bit_depth("x2rgb10le") == 10
         assert get_pix_fmt_bit_depth("xv36le") == 12
+        # Semi-planar names end in three digits: p210 is 10-bit, not 210.
+        assert get_pix_fmt_bit_depth("p210le") == 10
+        assert get_pix_fmt_bit_depth("p410le") == 10
+        assert get_pix_fmt_bit_depth("p216le") == 16
+        assert get_pix_fmt_bit_depth("v210") == 10
+        assert get_pix_fmt_bit_depth("r210") == 10
+        assert get_pix_fmt_bit_depth("gray16le") == 16
+        # Bare names mirror their le/be twins.
+        assert get_pix_fmt_bit_depth("p010") == 10
+        assert get_pix_fmt_bit_depth("p016") == 16
+        assert get_pix_fmt_bit_depth("p210") == 10
 
     def test_missing_format(self) -> None:
         assert get_pix_fmt_bit_depth(None) is None
