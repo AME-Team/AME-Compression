@@ -12,6 +12,7 @@ Two compression modes are supported:
 """
 
 import contextlib
+import logging
 import subprocess
 import tempfile
 import time
@@ -23,6 +24,8 @@ from .config import (
     AUDIO_CODEC,
     COMPRESSION_MODE_TARGET_SIZE,
     DEFAULT_CRF,
+    PIX_FMT_10BIT,
+    SVT_AV1_VISUAL_TUNING_PARAMS,
     TWO_PASS_FIRST_PASS_SHARE,
     VIDEO_CODEC,
     VIDEO_PRESET,
@@ -61,8 +64,26 @@ __all__ = [
     "resolve_target_plan",
 ]
 
+logger = logging.getLogger(__name__)
+
 # Statistics accumulated while an encode runs (average speed / fps reporting).
 Stats = dict[str, list[float]]
+
+# How many non-progress output lines are kept to classify a failure.
+_LOG_TAIL_LINES = 40
+
+# FFmpeg/SVT-AV1 rejections of ``-svtav1-params``. A retry only happens when a
+# single output line mentions one of the keys *and* a rejection phrase, so an
+# unrelated "invalid data" error that happens to sit next to an SVT config line
+# (which always lists "tune") cannot trigger a second, expensive encode.
+_TUNING_OPTION_KEYS = ("svtav1-params", "tune", "enable-qm")
+_TUNING_REJECTION_MARKERS = (
+    "unknown",
+    "unrecognized",
+    "invalid",
+    "not supported",
+    "error parsing",
+)
 
 
 class CompressionError(RuntimeError):
@@ -101,11 +122,13 @@ class EncodeOutcome:
         exit_code: Last FFmpeg exit code, or ``None`` when cancelled.
         scaled_resolution: Resolution of the output, if it was scaled.
         label: Human-readable name of the step that produced ``exit_code``.
+        output: Last non-progress output lines of the failing invocation.
     """
 
     exit_code: int | None
     scaled_resolution: tuple[int, int] | None
     label: str = "FFmpeg"
+    output: tuple[str, ...] = ()
 
 
 @dataclass
@@ -127,6 +150,19 @@ class JobContext:
         default_factory=lambda: {"fps_list": [], "speed_list": [], "frame_list": []}
     )
     plan: TargetBitratePlan | None = None
+
+
+@dataclass
+class EncodeSink:
+    """Mutable side-channel for one FFmpeg invocation.
+
+    Attributes:
+        stats: Statistics shared with the job (fps / speed accumulation).
+        output_tail: Last non-progress output lines, used to classify failures.
+    """
+
+    stats: Stats
+    output_tail: list[str] = field(default_factory=list[str])
 
 
 def format_bitrate(bitrate: int | float | str | None) -> str:
@@ -238,12 +274,42 @@ def _prepare_audio_args(params: VideoCompressionParams) -> list[str]:
 
 
 def _video_codec_args(params: VideoCompressionParams, video_kbps: int | None) -> list[str]:
-    """Build codec arguments for CRF (``video_kbps is None``) or VBR encoding."""
+    """Build codec arguments for CRF (``video_kbps is None``) or VBR encoding.
+
+    The perceptual tuning and pixel-format arguments are appended here so the
+    two-pass passes share them: statistics written by pass 1 only apply to
+    pass 2 when both use the same encoder settings.
+    """
     preset = params.preset if params.preset is not None else VIDEO_PRESET
+    args = ["-c:v", VIDEO_CODEC]
     if video_kbps is None:
         crf = params.crf if params.crf is not None else DEFAULT_CRF
-        return ["-c:v", VIDEO_CODEC, "-crf", str(crf), "-b:v", "0", "-preset", str(preset)]
-    return ["-c:v", VIDEO_CODEC, "-b:v", f"{video_kbps}k", "-preset", str(preset)]
+        args.extend(["-crf", str(crf), "-b:v", "0"])
+    else:
+        args.extend(["-b:v", f"{video_kbps}k"])
+    args.extend(["-preset", str(preset)])
+    args.extend(_visual_tuning_args(params))
+    args.extend(_pixel_format_args(params))
+    return args
+
+
+def _visual_tuning_args(params: VideoCompressionParams) -> list[str]:
+    """Return the SVT-AV1 perceptual tuning arguments (empty when disabled)."""
+    if not params.visual_tuning:
+        return []
+    return ["-svtav1-params", ":".join(SVT_AV1_VISUAL_TUNING_PARAMS)]
+
+
+def _pixel_format_args(params: VideoCompressionParams) -> list[str]:
+    """Return the 10-bit pixel format argument, or nothing to keep the source depth.
+
+    libsvtav1 accepts only 4:2:0 formats (``yuv420p`` / ``yuv420p10le``), so a
+    4:2:2 or 4:4:4 source is converted to 4:2:0 whether or not this option is
+    enabled; the flag changes the bit depth only.
+    """
+    if not params.ten_bit:
+        return []
+    return ["-pix_fmt", PIX_FMT_10BIT]
 
 
 def _prepare_video_command(
@@ -316,26 +382,30 @@ def _handle_video_progress(
     line: str,
     params: VideoCompressionParams,
     parser: ProgressParser,
-    stats: Stats,
+    sink: EncodeSink,
     progress: PassProgress,
 ) -> None:
     """Handle a single line of output from FFmpeg."""
     event = parser.parse_line(line)
     if event:
         if event.fps > 0:
-            stats["fps_list"].append(event.fps)
-            stats["speed_list"].append(event.speed)
-            stats["frame_list"].append(float(event.frame))
+            sink.stats["fps_list"].append(event.fps)
+            sink.stats["speed_list"].append(event.speed)
+            sink.stats["frame_list"].append(float(event.frame))
         if params.on_progress:
             params.on_progress(progress.map_event(event))
-    elif params.on_output:
+        return
+    sink.output_tail.append(line.rstrip())
+    if len(sink.output_tail) > _LOG_TAIL_LINES:
+        sink.output_tail[:] = sink.output_tail[-_LOG_TAIL_LINES:]
+    if params.on_output:
         params.on_output(line)
 
 
 def _run_ffmpeg(
     cmd: list[str],
     params: VideoCompressionParams,
-    stats: Stats,
+    sink: EncodeSink,
     total_duration: float,
     progress: PassProgress | None = None,
 ) -> int | None:
@@ -344,7 +414,7 @@ def _run_ffmpeg(
     Args:
         cmd: Full command line.
         params: Compression parameters (progress/cancellation callbacks).
-        stats: Mutable statistics accumulator.
+        sink: Statistics accumulator and failure-output sink.
         total_duration: Media duration used for progress calculation.
         progress: Progress mapping for this invocation (None = whole job).
 
@@ -368,7 +438,7 @@ def _run_ffmpeg(
                 if params.cancellation_source and params.cancellation_source.is_cancelled:
                     process.terminate()
                     return None
-                _handle_video_progress(line, params, parser, stats, mapping)
+                _handle_video_progress(line, params, parser, sink, mapping)
         process.wait()
         return process.returncode
     finally:
@@ -449,8 +519,11 @@ def _build_context(params: VideoCompressionParams) -> JobContext:
 def _encode_single_pass(params: VideoCompressionParams, ctx: JobContext) -> EncodeOutcome:
     """Encode with CRF in one pass."""
     cmd, scaled_res = _prepare_video_command(params, ctx.video_info)
-    code = _run_ffmpeg(cmd, params, ctx.stats, ctx.total_duration)
-    return EncodeOutcome(exit_code=code, scaled_resolution=scaled_res)
+    sink = EncodeSink(stats=ctx.stats)
+    code = _run_ffmpeg(cmd, params, sink, ctx.total_duration)
+    return EncodeOutcome(
+        exit_code=code, scaled_resolution=scaled_res, output=tuple(sink.output_tail)
+    )
 
 
 def _encode_two_pass(params: VideoCompressionParams, ctx: JobContext) -> EncodeOutcome:
@@ -468,19 +541,23 @@ def _encode_two_pass(params: VideoCompressionParams, ctx: JobContext) -> EncodeO
         pass1, pass2, scaled_res = _prepare_two_pass_commands(
             params, ctx.video_info, ctx.plan, passlogfile
         )
+        pass1_sink = EncodeSink(stats=analysis_stats)
         code = _run_ffmpeg(
             pass1,
             params,
-            analysis_stats,
+            pass1_sink,
             ctx.total_duration,
             PassProgress(offset=0.0, span=TWO_PASS_FIRST_PASS_SHARE, index=1, total=2),
         )
         if code is None or code != 0:
-            return EncodeOutcome(code, scaled_res, label="パス 1 (解析)")
+            return EncodeOutcome(
+                code, scaled_res, label="パス 1 (解析)", output=tuple(pass1_sink.output_tail)
+            )
+        pass2_sink = EncodeSink(stats=ctx.stats)
         code = _run_ffmpeg(
             pass2,
             params,
-            ctx.stats,
+            pass2_sink,
             ctx.total_duration,
             PassProgress(
                 offset=TWO_PASS_FIRST_PASS_SHARE,
@@ -489,7 +566,9 @@ def _encode_two_pass(params: VideoCompressionParams, ctx: JobContext) -> EncodeO
                 total=2,
             ),
         )
-        return EncodeOutcome(code, scaled_res, label="パス 2 (本エンコード)")
+        return EncodeOutcome(
+            code, scaled_res, label="パス 2 (本エンコード)", output=tuple(pass2_sink.output_tail)
+        )
     finally:
         _remove_passlog(passlogfile)
         with contextlib.suppress(OSError):
@@ -525,6 +604,8 @@ def _success_result(
         video_bitrate_kbps=plan.video_kbps if plan else 0,
         target_size_bytes=plan.target_bytes if plan else 0,
         target_size_achieved=output_size <= plan.target_bytes if plan else False,
+        visual_tuning=params.visual_tuning,
+        ten_bit=params.ten_bit,
         metadata={
             "avg_fps": _average(ctx.stats["fps_list"]),
             "avg_speed": _average(ctx.stats["speed_list"]),
@@ -601,6 +682,58 @@ def _finalize(
     return _success_result(params, ctx, outcome, output_path.stat().st_size)
 
 
+def _disable_visual_tuning(params: VideoCompressionParams, label: str) -> None:
+    """Drop the perceptual tuning arguments after a failed encode.
+
+    ``-svtav1-params tune=0:enable-qm=1`` is rejected by SVT-AV1 builds older
+    than the options, which fails the whole job. Retrying once without the
+    parameters keeps the encode working on those installs instead of crashing.
+    """
+    logger.warning(
+        "%s failed with -svtav1-params %s; retrying without perceptual tuning",
+        label,
+        ":".join(SVT_AV1_VISUAL_TUNING_PARAMS),
+    )
+    params.visual_tuning = False
+
+
+def _mentions_tuning_rejection(output: tuple[str, ...]) -> bool:
+    """Return True when a single output line rejects a tuning key."""
+    for line in output:
+        lowered = line.lower()
+        if any(key in lowered for key in _TUNING_OPTION_KEYS) and any(
+            marker in lowered for marker in _TUNING_REJECTION_MARKERS
+        ):
+            return True
+    return False
+
+
+def _should_retry_without_tuning(params: VideoCompressionParams, outcome: EncodeOutcome) -> bool:
+    """Return True only when the encoder rejected the tuning parameters.
+
+    A cancelled job, a signal-terminated process (negative exit code) and
+    failures that never mention the SVT-AV1 options (corrupt input, full disk,
+    unsupported pixel format) must not trigger a second, expensive encode.
+    """
+    if not params.visual_tuning:
+        return False
+    if outcome.exit_code is None or outcome.exit_code <= 0:
+        return False
+    if params.cancellation_source is not None and params.cancellation_source.is_cancelled:
+        return False
+    return _mentions_tuning_rejection(outcome.output)
+
+
+def _encode(params: VideoCompressionParams, ctx: JobContext) -> EncodeOutcome:
+    """Run the encode for the resolved mode, falling back once on tuning errors."""
+    encode = _encode_single_pass if ctx.plan is None else _encode_two_pass
+    outcome = encode(params, ctx)
+    if _should_retry_without_tuning(params, outcome):
+        _disable_visual_tuning(params, outcome.label)
+        outcome = encode(params, ctx)
+    return outcome
+
+
 def compress_video_service(**kwargs: Any) -> VideoCompressionResult:
     """Compress video using FFmpeg with AV1 codec (service layer)."""
     # kwargs are caller-supplied (API / CLI), so validate the path before the
@@ -616,9 +749,7 @@ def compress_video_service(**kwargs: Any) -> VideoCompressionResult:
     input_path = Path(params.input_path)
     try:
         ctx = _build_context(params)
-        outcome = (
-            _encode_single_pass(params, ctx) if ctx.plan is None else _encode_two_pass(params, ctx)
-        )
+        outcome = _encode(params, ctx)
         return _finalize(params, ctx, outcome)
     except CompressionError as exc:
         return _failure(str(exc), input_path)

@@ -6,8 +6,7 @@ from flask import Blueprint, Response, jsonify, request
 
 from ...analyzer import analyze_audio_quality, analyze_quality, detect_media_type
 from ...audio import get_audio_info_safe
-from ...ffmpeg import resolve_ffmpeg_paths
-from ...video import get_video_info_safe
+from ...ffmpeg import get_video_stream_details, resolve_ffmpeg_paths
 from ...volume import analyze_volume_level
 
 logger = logging.getLogger(__name__)
@@ -34,9 +33,12 @@ def get_info() -> Response | tuple[Response, int]:
     except OSError:
         logger.warning("Could not read file size for: %s", path)
 
-    info = get_video_info_safe(path_obj, ffprobe_path)
-    if info:
-        info_dict: dict[str, Any] = info
+    # A single ffprobe call returns geometry, bit depth and bit rate; the
+    # readout in the settings view needs all three, and probing twice would
+    # double the latency of a hot endpoint.
+    details = get_video_stream_details(path_obj, ffprobe_path)
+    if details:
+        info_dict: dict[str, Any] = dict(details)
         info_dict["type"] = "video"
         info_dict["size_bytes"] = size_bytes
         return jsonify(info_dict)

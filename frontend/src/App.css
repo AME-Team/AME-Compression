@@ -590,6 +590,35 @@ label.disabled-label,
   color: var(--color-text-meta);
 }
 
+/* ─── Source media summary ─── */
+.source-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+  background: var(--color-bg-subtle);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+
+.source-summary-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-meta);
+}
+
+.source-summary-figure {
+  font-family: var(--font-ui-mono);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
 /* ─── Batch optimize ─── */
 .batch-optimize-header {
   margin-bottom: 12px;

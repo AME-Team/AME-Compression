@@ -4,12 +4,97 @@ import contextlib
 import json
 import logging
 import platform
+import re
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Any, cast
 
 logger = logging.getLogger(__name__)
+
+# Bit depth suffix of an FFmpeg pixel format name: ``p10le``, ``p16be``,
+# ``f32le``. A name without a depth suffix (``yuv420p``, ``nv12``) is 8-bit.
+_PIX_FMT_DEPTH = re.compile(r"(?:p|f)(\d{1,2})(?:le|be)?$")
+
+# Packed/XYZ formats carry the depth as thousands (``rgb30`` = 3x10 bits) or in
+# the name itself, so the suffix pattern above cannot see it.
+_PIX_FMT_DEPTH_MAP: dict[str, int] = {
+    "x2rgb10le": 10,
+    "x2rgb10be": 10,
+    "x2bgr10le": 10,
+    "x2bgr10be": 10,
+    "xv30le": 10,
+    "xv30be": 10,
+    "xv36le": 12,
+    "xv36be": 12,
+    "rgb30": 10,
+    "bgr30": 10,
+    "gbr30": 10,
+    "xyz12le": 12,
+    "xyz12be": 12,
+    # Semi-planar / packed formats whose names end in three digits (or none at
+    # all), which the p/f suffix pattern cannot read: p210 is 10-bit, not 210.
+    "p010le": 10,
+    "p010be": 10,
+    "p210le": 10,
+    "p210be": 10,
+    "p410le": 10,
+    "p410be": 10,
+    "p012le": 12,
+    "p012be": 12,
+    "p212le": 12,
+    "p212be": 12,
+    "p412le": 12,
+    "p412be": 12,
+    "p016le": 16,
+    "p016be": 16,
+    "p216le": 16,
+    "p216be": 16,
+    "p416le": 16,
+    "p416be": 16,
+    "v210": 10,
+    "v410": 10,
+    "r210": 10,
+    # Single-plane greyscale formats carry the depth in the suffix.
+    "gray10le": 10,
+    "gray10be": 10,
+    "gray12le": 12,
+    "gray12be": 12,
+    "gray16le": 16,
+    "gray16be": 16,
+    # Packed YUV 4:2:2 with 10/12/16-bit components.
+    "y210le": 10,
+    "y210be": 10,
+    "y212le": 12,
+    "y212be": 12,
+    "y216le": 16,
+    "y216be": 16,
+    # 16-bit-per-channel RGB is 48 bits packed; 5/6-bit packed RGB is still an
+    # 8-bit-per-channel SDR source as far as the encoder is concerned.
+    "rgb48le": 16,
+    "rgb48be": 16,
+    "bgr48le": 16,
+    "bgr48be": 16,
+    "rgb565le": 8,
+    "rgb565be": 8,
+    "bgr565le": 8,
+    "bgr565be": 8,
+    "rgb555le": 8,
+    "rgb555be": 8,
+    "bgr555le": 8,
+    "bgr555be": 8,
+}
+
+# Bare names (``p010``) are accepted as aliases of their ``le``/``be`` twins,
+# so an ffprobe build that omits the endianness suffix still reports the depth.
+_PIX_FMT_DEPTH_LOOKUP: dict[str, int] = {
+    **{
+        name[:-2]: depth
+        for name, depth in _PIX_FMT_DEPTH_MAP.items()
+        if name.endswith(("le", "be"))
+    },
+    **_PIX_FMT_DEPTH_MAP,
+}
 
 
 def _get_executable_names() -> tuple[str, str]:
@@ -258,7 +343,7 @@ def get_detailed_media_info(
         )
         data = cast(dict[str, Any], json.loads(result.stdout))
         return data
-    except subprocess.CalledProcessError:
+    except (subprocess.CalledProcessError, OSError):
         return None
     except json.JSONDecodeError:
         return None
@@ -374,47 +459,15 @@ def get_audio_info(audio_path: str | Path, ffprobe_path: str = "ffprobe") -> dic
     return info
 
 
-def _parse_video_csv_output(output: str) -> dict[str, Any]:
-    """Parse ffprobe CSV output for video info."""
-    width = None
-    height = None
-    fps = None
-    duration = None
-
-    parts = output.strip().split("x")
-    if len(parts) >= 2:
-        with contextlib.suppress(ValueError):
-            width = int(parts[0])
-            remaining = parts[1].split(",")
-            height = int(remaining[0])
-
-            if len(remaining) > 1:
-                fps_str = remaining[1]
-                if "/" in fps_str:
-                    num, den = fps_str.split("/")
-                    if float(den) != 0:
-                        fps = float(num) / float(den)
-                else:
-                    fps = float(fps_str)
-
-            if len(remaining) > 2:
-                duration = float(remaining[2])
-
-    return {
-        "width": width,
-        "height": height,
-        "fps": fps,
-        "duration": duration,
-    }
-
-
 def get_video_info_safe(
     video_path: str | Path, ffprobe_path: str = "ffprobe"
 ) -> dict[str, Any] | None:
     """Get video information using ffprobe (service layer safe version).
 
     Unlike get_video_info, this function does not call sys.exit on failure,
-    making it safe for API/GUI use.
+    making it safe for API/GUI use. It delegates to
+    :func:`get_video_stream_details` so there is a single ffprobe parsing path
+    and the historical keys cannot drift from the richer one.
 
     Args:
         video_path (str): Path to video file
@@ -423,63 +476,186 @@ def get_video_info_safe(
     Returns:
         dict: Video width, height, duration, fps, or None on error
     """
-    cmd = [
-        ffprobe_path,
-        "-v",
-        "error",
-        "-select_streams",
-        "v:0",
-        "-show_entries",
-        "stream=width,height,r_frame_rate,duration",
-        "-of",
-        "csv=s=x:p=0",
-        str(video_path),
-    ]
+    details = get_video_stream_details(video_path, ffprobe_path)
+    if not details:
+        return None
+    width = details.get("width")
+    height = details.get("height")
+    if width is None or height is None:
+        return None
+    return {
+        "width": width,
+        "height": height,
+        "fps": details.get("fps"),
+        "duration": details.get("duration"),
+    }
 
+
+def get_pix_fmt_bit_depth(pix_fmt: str | None) -> int | None:
+    """Return the bit depth encoded in an FFmpeg pixel format name.
+
+    ``yuv420p`` and ``nv12`` carry no depth suffix and are 8-bit by
+    convention, ``yuv420p10le`` and ``p010le`` are 10-bit, ``grayf32le`` is
+    32-bit.
+
+    Args:
+        pix_fmt: Pixel format name as reported by ffprobe.
+
+    Returns:
+        The bit depth, or ``None`` when no pixel format is known.
+    """
+    if not pix_fmt:
+        return None
+    known = _PIX_FMT_DEPTH_LOOKUP.get(pix_fmt)
+    if known is not None:
+        return known
+    match = _PIX_FMT_DEPTH.search(pix_fmt)
+    return int(match.group(1)) if match else 8
+
+
+def _positive_int(value: Any) -> int | None:
+    """Parse a positive integer from ffprobe output, or return ``None``."""
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=True,
-        )
-        info = _parse_video_csv_output(result.stdout)
-    except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+        parsed = int(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _positive_float(value: Any) -> float | None:
+    """Parse a positive float from ffprobe output, or return ``None``."""
+    try:
+        parsed = float(str(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _resolve_video_bit_rate(
+    video_stream: dict[str, Any],
+    fmt_info: dict[str, Any],
+    media_path: Path,
+    duration: float | None,
+    other_streams: list[dict[str, Any]] | None = None,
+) -> tuple[int | None, bool]:
+    """Resolve the bit rate of a video stream.
+
+    Args:
+        video_stream: ffprobe video stream dictionary.
+        fmt_info: ffprobe format dictionary.
+        media_path: Media file used for the size-based fallback.
+        duration: Known media duration in seconds, if any.
+        other_streams: Non-video streams, subtracted from the size-based
+            estimate so it describes the video track, not the whole container.
+
+    Returns:
+        ``(bits_per_second, estimated)``. ``estimated`` is True whenever the
+        value did not come from the video stream itself: the container bit
+        rate is computed by the demuxer from file size and duration, and the
+        last resort (file size x 8 / duration) covers every stream.
+    """
+    parsed = _positive_int(video_stream.get("bit_rate"))
+    if parsed is not None:
+        return parsed, False
+
+    parsed = _positive_int(fmt_info.get("bit_rate"))
+    if parsed is not None:
+        return parsed, True
+
+    if duration is None:
+        return None, False
+    try:
+        size = media_path.stat().st_size
+    except OSError:
+        return None, False
+    if size <= 0:
+        return None, False
+
+    total_bits = float(size * 8)
+    for stream in other_streams or []:
+        rate = _positive_int(stream.get("bit_rate"))
+        if rate is not None:
+            total_bits -= rate * duration
+    if total_bits <= 0:
+        total_bits = float(size * 8)
+    return int(total_bits / duration), True
+
+
+def _parse_frame_rate(value: Any) -> float | None:
+    """Parse ffprobe's ``num/den`` frame rate into a float."""
+    if not isinstance(value, str) or not value:
+        return None
+    if "/" in value:
+        numerator, _, denominator = value.partition("/")
+        num = _positive_float(numerator)
+        den = _positive_float(denominator)
+        if num is None or den is None:
+            return None
+        rate = num / den
+        return rate if rate > 0 else None
+    return _positive_float(value)
+
+
+def get_video_stream_details(
+    video_path: str | Path, ffprobe_path: str = "ffprobe"
+) -> dict[str, Any] | None:
+    """Probe the first video stream for its geometry, depth and bit rate.
+
+    One ffprobe invocation supplies everything the media-info endpoint needs,
+    so the request never pays for a second probe. Matroska and some other
+    containers store no per-stream bit rate, so the container bit rate is used
+    next, and as a last resort the file size divided by the duration.
+    ``bit_rate_estimated`` is True for both fallbacks so the UI can mark the
+    figure as an approximation.
+
+    Args:
+        video_path: Path to the media file.
+        ffprobe_path: Path to the ffprobe executable.
+
+    Returns:
+        A dict with ``width``, ``height``, ``fps``, ``duration``, ``bit_rate``
+        (bits per second, ``None`` when unknown), ``bit_rate_estimated``,
+        ``bit_depth``, ``pix_fmt``, ``codec_name`` and ``profile``; ``None``
+        when no video stream can be read.
+    """
+    detailed = get_detailed_media_info(video_path, ffprobe_path)
+    if not detailed:
         return None
 
-    if info["duration"] is None:
-        format_cmd = [
-            ffprobe_path,
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "csv=p=0",
-            str(video_path),
-        ]
-        try:
-            format_result = subprocess.run(
-                format_cmd,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                check=True,
-            )
-            format_output = format_result.stdout.strip()
-            if format_output:
-                with contextlib.suppress(ValueError):
-                    info["duration"] = float(format_output)
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            pass
+    streams = cast(list[dict[str, Any]], detailed.get("streams", []))
+    video_stream = next((s for s in streams if s.get("codec_type") == "video"), None)
+    if video_stream is None:
+        return None
 
-    if info["width"] is not None and info["height"] is not None:
-        return info
+    fmt_info = cast(dict[str, Any], detailed.get("format", {}))
+    duration = _positive_float(video_stream.get("duration")) or _positive_float(
+        fmt_info.get("duration")
+    )
+    other_streams = [s for s in streams if s.get("codec_type") != "video"]
+    bit_rate, estimated = _resolve_video_bit_rate(
+        video_stream, fmt_info, Path(video_path), duration, other_streams
+    )
 
-    return None
+    pix_fmt = video_stream.get("pix_fmt")
+    bit_depth = get_pix_fmt_bit_depth(pix_fmt if isinstance(pix_fmt, str) else None)
+    raw_depth = _positive_int(video_stream.get("bits_per_raw_sample"))
+    if raw_depth is not None:
+        bit_depth = raw_depth
+
+    codec_name = video_stream.get("codec_name")
+    profile = video_stream.get("profile")
+    return {
+        "width": _positive_int(video_stream.get("width")),
+        "height": _positive_int(video_stream.get("height")),
+        "fps": _parse_frame_rate(video_stream.get("r_frame_rate")),
+        "duration": duration,
+        "bit_rate": bit_rate,
+        "bit_rate_estimated": estimated,
+        "bit_depth": bit_depth,
+        "pix_fmt": pix_fmt if isinstance(pix_fmt, str) else None,
+        "codec_name": codec_name if isinstance(codec_name, str) else "",
+        "profile": profile if isinstance(profile, str) else "",
+    }
 
 
 def get_audio_info_safe(

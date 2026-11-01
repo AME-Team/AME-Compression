@@ -10,6 +10,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from .config import COMPRESSION_MODE_CRF, DEFAULT_TEN_BIT, DEFAULT_VISUAL_TUNING
+
 # Use Forward references or TypeVars to avoid circular imports if needed
 ProgressCallback = Callable[[Any], None]
 OutputCallback = Callable[[str], None]
@@ -36,6 +38,8 @@ class VideoCompressionParams:
         target_size_bytes: Absolute output size target in bytes.
         target_size_percent: Output size target as a percentage of the input
             file size.
+        visual_tuning: Pass SVT-AV1 ``tune=0:enable-qm=1`` (perceptual quality).
+        ten_bit: Encode to a 10-bit pixel format instead of the source depth.
     """
 
     input_path: str | Path
@@ -48,9 +52,11 @@ class VideoCompressionParams:
     resolution: str | None = None
     volume_gain_db: str | float | None = None
     denoise_level: float | None = None
-    compression_mode: str = "crf"
+    compression_mode: str = COMPRESSION_MODE_CRF
     target_size_bytes: int | None = None
     target_size_percent: float | None = None
+    visual_tuning: bool = DEFAULT_VISUAL_TUNING
+    ten_bit: bool = DEFAULT_TEN_BIT
     ffmpeg_path: str = "ffmpeg"
     ffprobe_path: str = "ffprobe"
     on_progress: ProgressCallback | None = None
@@ -162,6 +168,8 @@ class VideoCompressionResult(CompressionResult):
         video_bitrate_kbps: Video bitrate targeted by the two-pass encode
         target_size_bytes: Requested output size (0 when not targeting a size)
         target_size_achieved: Whether the output stayed within the target
+        visual_tuning: Whether SVT-AV1 perceptual tuning was applied
+        ten_bit: Whether a 10-bit pixel format was encoded
     """
 
     width: int | None = None
@@ -171,10 +179,12 @@ class VideoCompressionResult(CompressionResult):
     audio_codec: str = ""
     crf: int = 0
     preset: int = 0
-    compression_mode: str = "crf"
+    compression_mode: str = COMPRESSION_MODE_CRF
     video_bitrate_kbps: int = 0
     target_size_bytes: int = 0
     target_size_achieved: bool = False
+    visual_tuning: bool = False
+    ten_bit: bool = False
 
 
 @dataclass

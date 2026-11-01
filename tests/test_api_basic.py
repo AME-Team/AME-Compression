@@ -20,8 +20,8 @@ def test_api_media_info_endpoint(client: FlaskClient) -> None:
     with (
         patch("backend.api.blueprints.media.Path.exists", return_value=True),
         patch(
-            "backend.api.blueprints.media.get_video_info_safe",
-            return_value={"width": 1920, "height": 1080},
+            "backend.api.blueprints.media.get_video_stream_details",
+            return_value={"width": 1920, "height": 1080, "fps": 30.0, "duration": 10.0},
         ),
     ):
         response = client.get("/api/media/info?path=test.mp4")

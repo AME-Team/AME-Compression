@@ -16,6 +16,30 @@ DEFAULT_FPS = None  # Default FPS (None = keep original)
 MAX_FPS = 120  # Maximum FPS
 
 # ============================================
+# SVT-AV1 Perceptual Tuning
+# ============================================
+# Options handed to FFmpeg as one ``-svtav1-params`` argument that make the
+# rate-distortion optimisation follow human perception instead of objective
+# quality metrics:
+#
+#   tune=0       - visual quality (VQ) tuning: bits are spent on the edges,
+#                  texture and shading the eye follows instead of flattening
+#                  the picture to raise PSNR/SSIM.
+#   enable-qm=1  - quantisation matrices: high frequencies (where the eye is
+#                  least sensitive) are coarsened while low/mid frequencies
+#                  are protected, which suppresses mosquito noise at the same
+#                  bitrate.
+SVT_AV1_VISUAL_TUNING_PARAMS = ("tune=0", "enable-qm=1")
+DEFAULT_VISUAL_TUNING = True
+
+# 10-bit encoding. The encoder keeps 4x finer intermediate precision, which
+# removes rounding drift and banding in gradients at low bitrates. Disabled by
+# default: the output is AV1 Main profile 10-bit, which not every playback
+# device decodes.
+PIX_FMT_10BIT = "yuv420p10le"
+DEFAULT_TEN_BIT = False
+
+# ============================================
 # Audio Codec Settings (for video)
 # ============================================
 AUDIO_CODEC = "aac"  # Audio codec (AAC)

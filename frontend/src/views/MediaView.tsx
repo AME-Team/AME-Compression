@@ -11,7 +11,13 @@ import type { TFunction } from 'i18next'
 import { Upload, Settings, FileSearch, X, Sparkles } from 'lucide-react'
 import { api } from '../services/api'
 import type { MediaProfile } from '../profiles'
-import { DEFAULT_SETTINGS } from '../profiles'
+import { DEFAULT_SETTINGS, DEFAULT_TEN_BIT, DEFAULT_VISUAL_TUNING } from '../profiles'
+import {
+  formatBitDepth,
+  formatBitRate,
+  formatFrameRate,
+  formatResolution,
+} from '../utils/mediaInfo'
 import type {
   QualityAnalysisResult,
   BatchAnalysisItem,
@@ -294,6 +300,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [volumeValue, setVolumeValue] = useState(0)
   const [denoiseEnabled, setDenoiseEnabled] = useState(false)
   const [denoiseLevel, setDenoiseLevel] = useState(0.15)
+  const [visualTuning, setVisualTuning] = useState<boolean>(DEFAULT_VISUAL_TUNING)
+  const [tenBit, setTenBit] = useState<boolean>(DEFAULT_TEN_BIT)
 
   const [loading, setLoading] = useState(false)
   const [failedFiles, setFailedFiles] = useState<string[]>([])
@@ -310,6 +318,27 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 })
 
   const videoFileCount = inputPaths.filter((path) => detectMediaType(path) === 'video').length
+  // Source readout: what the file actually is today (resolution, colour depth,
+  // bit rate). Missing fields are simply omitted, never rendered as "undefined".
+  const sourceSummary = useMemo(() => {
+    const parts: { kind: string; label: string }[] = []
+    const resolution = formatResolution(sourceInfo?.width, sourceInfo?.height)
+    if (resolution) parts.push({ kind: 'resolution', label: resolution })
+    const frameRate = formatFrameRate(sourceInfo?.fps)
+    if (frameRate) parts.push({ kind: 'frameRate', label: frameRate })
+    const depth = formatBitDepth(sourceInfo?.bit_depth)
+    if (depth) parts.push({ kind: 'bitDepth', label: depth })
+    const rate = formatBitRate(sourceInfo?.bit_rate)
+    if (rate) {
+      parts.push({
+        kind: 'bitRate',
+        label: sourceInfo?.bit_rate_estimated
+          ? t('video_settings.bit_rate_estimated', { value: rate })
+          : rate,
+      })
+    }
+    return parts
+  }, [sourceInfo, t])
   const isAnalysisActive = analysisMode !== 'none'
   const disableCrf = isAnalysisActive && (analysisMode === 'all' || analysisMode === 'video')
   const disableAudioSettings =
@@ -336,6 +365,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       volumeValue,
       denoiseEnabled,
       denoiseLevel,
+      visualTuning,
+      tenBit,
     }),
     [
       mediaType,
@@ -357,6 +388,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
       volumeValue,
       denoiseEnabled,
       denoiseLevel,
+      visualTuning,
+      tenBit,
     ],
   )
 
@@ -380,6 +413,9 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
     setVolumeValue(settings.volumeValue)
     setDenoiseEnabled(settings.denoiseEnabled)
     setDenoiseLevel(settings.denoiseLevel)
+    // Profiles saved before the encoder options existed have neither field.
+    setVisualTuning(settings.visualTuning ?? DEFAULT_VISUAL_TUNING)
+    setTenBit(settings.tenBit ?? DEFAULT_TEN_BIT)
   }, [])
 
   const applyDefaults = useCallback((): void => {
@@ -617,6 +653,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               compression_mode: compressionMode,
               target_size_bytes: resolvedTargetBytes,
               target_size_percent: resolvedTargetPercent,
+              visual_tuning: visualTuning,
+              ten_bit: tenBit,
             })
             startedCount += 1
           } catch (error) {
@@ -908,6 +946,16 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
         {mediaType === 'video' ? (
           <>
             <div className="section-title">{t('video_settings.video_section')}</div>
+            {sourceSummary.length > 0 && (
+              <div className="source-summary" role="status">
+                <span className="source-summary-label">{t('video_settings.source_label')}</span>
+                {sourceSummary.map((part) => (
+                  <span key={part.kind} className="source-summary-figure">
+                    {part.label}
+                  </span>
+                ))}
+              </div>
+            )}
             <div className="batch-optimize-header">
               <label htmlFor="analysis-mode" className="batch-optimize-toggle-label">
                 {t('quality_analysis.mode_label')}
@@ -1236,6 +1284,38 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
                     label: t('video_settings.fps_options.' + fps, fps + ' FPS'),
                   }))}
                 />
+              </div>
+            </div>
+
+            <div className="sub-section-title">{t('video_settings.quality_options')}</div>
+            <div className="settings-grid">
+              <div className="setting-item">
+                <label htmlFor="visual-tuning">
+                  <input
+                    id="visual-tuning"
+                    type="checkbox"
+                    checked={visualTuning}
+                    onChange={(e) => {
+                      setVisualTuning(e.target.checked)
+                    }}
+                  />{' '}
+                  {t('video_settings.visual_tuning')}
+                </label>
+                <small>{t('video_settings.visual_tuning_hint')}</small>
+              </div>
+              <div className="setting-item">
+                <label htmlFor="ten-bit">
+                  <input
+                    id="ten-bit"
+                    type="checkbox"
+                    checked={tenBit}
+                    onChange={(e) => {
+                      setTenBit(e.target.checked)
+                    }}
+                  />{' '}
+                  {t('video_settings.ten_bit')}
+                </label>
+                <small>{t('video_settings.ten_bit_hint')}</small>
               </div>
             </div>
 

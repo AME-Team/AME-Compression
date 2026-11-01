@@ -189,7 +189,7 @@ def test_get_job_status_not_found(client: FlaskClient) -> None:
 def test_media_info_audio(client: FlaskClient) -> None:
     with (
         patch("backend.api.blueprints.media.Path.exists", return_value=True),
-        patch("backend.api.blueprints.media.get_video_info_safe", return_value=None),
+        patch("backend.api.blueprints.media.get_video_stream_details", return_value=None),
         patch(
             "backend.api.blueprints.media.get_audio_info_safe",
             return_value={"bitrate": "128k"},
@@ -199,6 +199,52 @@ def test_media_info_audio(client: FlaskClient) -> None:
         assert response.status_code == 200
         assert response.get_json()["type"] == "audio"
         assert response.get_json()["bitrate"] == "128k"
+
+
+def test_media_info_video_includes_bit_depth_and_bit_rate(client: FlaskClient) -> None:
+    with (
+        patch("backend.api.blueprints.media.Path.exists", return_value=True),
+        patch(
+            "backend.api.blueprints.media.get_video_stream_details",
+            return_value={
+                "width": 1920,
+                "height": 1080,
+                "fps": 30.0,
+                "duration": 10.0,
+                "bit_rate": 5_000_000,
+                "bit_rate_estimated": False,
+                "bit_depth": 10,
+                "pix_fmt": "yuv420p10le",
+                "codec_name": "av1",
+                "profile": "Main",
+            },
+        ),
+    ):
+        response = client.get("/api/media/info?path=test.mp4")
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["type"] == "video"
+    assert body["bit_rate"] == 5_000_000
+    assert body["bit_rate_estimated"] is False
+    assert body["bit_depth"] == 10
+
+
+def test_media_info_without_a_video_stream_falls_back_to_audio(client: FlaskClient) -> None:
+    with (
+        patch("backend.api.blueprints.media.Path.exists", return_value=True),
+        patch("backend.api.blueprints.media.get_video_stream_details", return_value=None),
+        patch(
+            "backend.api.blueprints.media.get_audio_info_safe",
+            return_value={"bitrate": "192k", "duration": 10.0},
+        ),
+    ):
+        response = client.get("/api/media/info?path=test.mp4")
+
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["type"] == "audio"
+    assert "bit_depth" not in body
 
 
 def test_media_info_not_found(client: FlaskClient) -> None:

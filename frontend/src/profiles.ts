@@ -21,9 +21,20 @@ export interface MediaProfile {
   volumeValue: number
   denoiseEnabled: boolean
   denoiseLevel: number
+  /** SVT-AV1 tune=0 + enable-qm=1 (perceptual quality tuning). */
+  visualTuning?: boolean
+  /** Encode to a 10-bit pixel format instead of the source depth. */
+  tenBit?: boolean
 }
 
 export const PROFILE_STORAGE_KEY = 'ame-media-profiles'
+
+/**
+ * Defaults for the SVT-AV1 encoder options. Mirrored in backend/config.py as
+ * DEFAULT_VISUAL_TUNING / DEFAULT_TEN_BIT; keep both sides in sync.
+ */
+export const DEFAULT_VISUAL_TUNING = true
+export const DEFAULT_TEN_BIT = false
 
 export const DEFAULT_SETTINGS: Omit<MediaProfile, 'name'> = {
   mediaType: 'video',
@@ -45,6 +56,8 @@ export const DEFAULT_SETTINGS: Omit<MediaProfile, 'name'> = {
   volumeValue: 0,
   denoiseEnabled: false,
   denoiseLevel: 0.15,
+  visualTuning: DEFAULT_VISUAL_TUNING,
+  tenBit: DEFAULT_TEN_BIT,
 }
 
 export function loadProfiles(): MediaProfile[] {
