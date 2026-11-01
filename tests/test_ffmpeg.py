@@ -193,6 +193,24 @@ class TestVideoStreamDetails:
         assert details["bit_rate"] == 1_000_000
         assert details["bit_rate_estimated"] is True
 
+    def test_estimate_excludes_the_audio_track(self, tmp_path: Path) -> None:
+        source = tmp_path / "in.mkv"
+        source.write_bytes(b"\0" * 1_000_000)
+        payload: dict[str, Any] = {
+            "streams": [
+                {"codec_type": "video", "pix_fmt": "yuv420p"},
+                {"codec_type": "audio", "bit_rate": "100000"},
+            ],
+            "format": {"duration": "8.0"},
+        }
+        with patch("backend.ffmpeg.get_detailed_media_info", return_value=payload):
+            details = get_video_stream_details(source)
+
+        assert details is not None
+        # 8,000,000 bits total - 8 s x 100 kbps of audio = 7,200,000 / 8 s.
+        assert details["bit_rate"] == 900_000
+        assert details["bit_rate_estimated"] is True
+
     def test_prefers_bits_per_raw_sample(self, tmp_path: Path) -> None:
         payload = _details_payload(
             {"pix_fmt": "yuv420p", "bits_per_raw_sample": "10", "bit_rate": "1000"}

@@ -536,6 +536,7 @@ def _resolve_video_bit_rate(
     fmt_info: dict[str, Any],
     media_path: Path,
     duration: float | None,
+    other_streams: list[dict[str, Any]] | None = None,
 ) -> tuple[int | None, bool]:
     """Resolve the bit rate of a video stream.
 
@@ -544,6 +545,8 @@ def _resolve_video_bit_rate(
         fmt_info: ffprobe format dictionary.
         media_path: Media file used for the size-based fallback.
         duration: Known media duration in seconds, if any.
+        other_streams: Non-video streams, subtracted from the size-based
+            estimate so it describes the video track, not the whole container.
 
     Returns:
         ``(bits_per_second, estimated)``. ``estimated`` is True whenever the
@@ -567,7 +570,15 @@ def _resolve_video_bit_rate(
         return None, False
     if size <= 0:
         return None, False
-    return int(size * 8 / duration), True
+
+    total_bits = float(size * 8)
+    for stream in other_streams or []:
+        rate = _positive_int(stream.get("bit_rate"))
+        if rate is not None:
+            total_bits -= rate * duration
+    if total_bits <= 0:
+        total_bits = float(size * 8)
+    return int(total_bits / duration), True
 
 
 def _parse_frame_rate(value: Any) -> float | None:
@@ -620,8 +631,9 @@ def get_video_stream_details(
     duration = _positive_float(video_stream.get("duration")) or _positive_float(
         fmt_info.get("duration")
     )
+    other_streams = [s for s in streams if s.get("codec_type") != "video"]
     bit_rate, estimated = _resolve_video_bit_rate(
-        video_stream, fmt_info, Path(video_path), duration
+        video_stream, fmt_info, Path(video_path), duration, other_streams
     )
 
     pix_fmt = video_stream.get("pix_fmt")
