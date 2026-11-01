@@ -116,6 +116,9 @@ class TestPixelFormatBitDepth:
         assert get_pix_fmt_bit_depth("p010le") == 10
         assert get_pix_fmt_bit_depth("yuv444p12le") == 12
         assert get_pix_fmt_bit_depth("grayf32le") == 32
+        # Packed formats carry no p/f suffix and are covered by the lookup table.
+        assert get_pix_fmt_bit_depth("x2rgb10le") == 10
+        assert get_pix_fmt_bit_depth("xv36le") == 12
 
     def test_missing_format(self) -> None:
         assert get_pix_fmt_bit_depth(None) is None
@@ -182,6 +185,16 @@ class TestVideoStreamDetails:
     def test_prefers_bits_per_raw_sample(self, tmp_path: Path) -> None:
         payload = _details_payload(
             {"pix_fmt": "yuv420p", "bits_per_raw_sample": "10", "bit_rate": "1000"}
+        )
+        with patch("backend.ffmpeg.get_detailed_media_info", return_value=payload):
+            details = get_video_stream_details(tmp_path / "in.mp4")
+
+        assert details is not None
+        assert details["bit_depth"] == 10
+
+    def test_accepts_a_numeric_bits_per_raw_sample(self, tmp_path: Path) -> None:
+        payload = _details_payload(
+            {"pix_fmt": "yuv420p", "bits_per_raw_sample": 10, "bit_rate": "1000"}
         )
         with patch("backend.ffmpeg.get_detailed_media_info", return_value=payload):
             details = get_video_stream_details(tmp_path / "in.mp4")

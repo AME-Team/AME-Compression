@@ -12,6 +12,7 @@ Two compression modes are supported:
 """
 
 import contextlib
+import logging
 import subprocess
 import tempfile
 import time
@@ -62,6 +63,8 @@ __all__ = [
     "get_video_info_safe",
     "resolve_target_plan",
 ]
+
+logger = logging.getLogger(__name__)
 
 # Statistics accumulated while an encode runs (average speed / fps reporting).
 Stats = dict[str, list[float]]
@@ -635,6 +638,31 @@ def _finalize(
     return _success_result(params, ctx, outcome, output_path.stat().st_size)
 
 
+def _disable_visual_tuning(params: VideoCompressionParams, label: str) -> None:
+    """Drop the perceptual tuning arguments after a failed encode.
+
+    ``-svtav1-params tune=0:enable-qm=1`` is rejected by SVT-AV1 builds older
+    than the options, which fails the whole job. Retrying once without the
+    parameters keeps the encode working on those installs instead of crashing.
+    """
+    logger.warning(
+        "%s failed with -svtav1-params %s; retrying without perceptual tuning",
+        label,
+        ":".join(SVT_AV1_VISUAL_TUNING_PARAMS),
+    )
+    params.visual_tuning = False
+
+
+def _encode(params: VideoCompressionParams, ctx: JobContext) -> EncodeOutcome:
+    """Run the encode for the resolved mode, falling back once on tuning errors."""
+    encode = _encode_single_pass if ctx.plan is None else _encode_two_pass
+    outcome = encode(params, ctx)
+    if outcome.exit_code not in (None, 0) and params.visual_tuning:
+        _disable_visual_tuning(params, outcome.label)
+        outcome = encode(params, ctx)
+    return outcome
+
+
 def compress_video_service(**kwargs: Any) -> VideoCompressionResult:
     """Compress video using FFmpeg with AV1 codec (service layer)."""
     # kwargs are caller-supplied (API / CLI), so validate the path before the
@@ -650,9 +678,7 @@ def compress_video_service(**kwargs: Any) -> VideoCompressionResult:
     input_path = Path(params.input_path)
     try:
         ctx = _build_context(params)
-        outcome = (
-            _encode_single_pass(params, ctx) if ctx.plan is None else _encode_two_pass(params, ctx)
-        )
+        outcome = _encode(params, ctx)
         return _finalize(params, ctx, outcome)
     except CompressionError as exc:
         return _failure(str(exc), input_path)

@@ -42,7 +42,7 @@ export interface MediaInfo {
   duration: number
   width?: number
   height?: number
-  fps?: number
+  fps?: number | null
   bitrate?: number
   /** Video bit rate in bits per second; absent when probing failed. */
   bit_rate?: number | null

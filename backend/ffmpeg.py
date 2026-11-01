@@ -16,6 +16,24 @@ logger = logging.getLogger(__name__)
 # ``f32le``. A name without a depth suffix (``yuv420p``, ``nv12``) is 8-bit.
 _PIX_FMT_DEPTH = re.compile(r"(?:p|f)(\d+)")
 
+# Packed/XYZ formats carry the depth as thousands (``rgb30`` = 3x10 bits) or in
+# the name itself, so the suffix pattern above cannot see it.
+_PIX_FMT_DEPTH_MAP: dict[str, int] = {
+    "x2rgb10le": 10,
+    "x2rgb10be": 10,
+    "x2bgr10le": 10,
+    "x2bgr10be": 10,
+    "xv30le": 10,
+    "xv30be": 10,
+    "xv36le": 12,
+    "xv36be": 12,
+    "rgb30": 10,
+    "bgr30": 10,
+    "gbr30": 10,
+    "xyz12le": 12,
+    "xyz12be": 12,
+}
+
 
 def _get_executable_names() -> tuple[str, str]:
     """Return platform-appropriate ffmpeg and ffprobe executable names."""
@@ -379,47 +397,15 @@ def get_audio_info(audio_path: str | Path, ffprobe_path: str = "ffprobe") -> dic
     return info
 
 
-def _parse_video_csv_output(output: str) -> dict[str, Any]:
-    """Parse ffprobe CSV output for video info."""
-    width = None
-    height = None
-    fps = None
-    duration = None
-
-    parts = output.strip().split("x")
-    if len(parts) >= 2:
-        with contextlib.suppress(ValueError):
-            width = int(parts[0])
-            remaining = parts[1].split(",")
-            height = int(remaining[0])
-
-            if len(remaining) > 1:
-                fps_str = remaining[1]
-                if "/" in fps_str:
-                    num, den = fps_str.split("/")
-                    if float(den) != 0:
-                        fps = float(num) / float(den)
-                else:
-                    fps = float(fps_str)
-
-            if len(remaining) > 2:
-                duration = float(remaining[2])
-
-    return {
-        "width": width,
-        "height": height,
-        "fps": fps,
-        "duration": duration,
-    }
-
-
 def get_video_info_safe(
     video_path: str | Path, ffprobe_path: str = "ffprobe"
 ) -> dict[str, Any] | None:
     """Get video information using ffprobe (service layer safe version).
 
     Unlike get_video_info, this function does not call sys.exit on failure,
-    making it safe for API/GUI use.
+    making it safe for API/GUI use. It delegates to
+    :func:`get_video_stream_details` so there is a single ffprobe parsing path
+    and the historical keys cannot drift from the richer one.
 
     Args:
         video_path (str): Path to video file
@@ -428,63 +414,19 @@ def get_video_info_safe(
     Returns:
         dict: Video width, height, duration, fps, or None on error
     """
-    cmd = [
-        ffprobe_path,
-        "-v",
-        "error",
-        "-select_streams",
-        "v:0",
-        "-show_entries",
-        "stream=width,height,r_frame_rate,duration",
-        "-of",
-        "csv=s=x:p=0",
-        str(video_path),
-    ]
-
-    try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=True,
-        )
-        info = _parse_video_csv_output(result.stdout)
-    except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+    details = get_video_stream_details(video_path, ffprobe_path)
+    if not details:
         return None
-
-    if info["duration"] is None:
-        format_cmd = [
-            ffprobe_path,
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "csv=p=0",
-            str(video_path),
-        ]
-        try:
-            format_result = subprocess.run(
-                format_cmd,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                check=True,
-            )
-            format_output = format_result.stdout.strip()
-            if format_output:
-                with contextlib.suppress(ValueError):
-                    info["duration"] = float(format_output)
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            pass
-
-    if info["width"] is not None and info["height"] is not None:
-        return info
-
-    return None
+    width = details.get("width")
+    height = details.get("height")
+    if width is None or height is None:
+        return None
+    return {
+        "width": width,
+        "height": height,
+        "fps": details.get("fps"),
+        "duration": details.get("duration"),
+    }
 
 
 def get_pix_fmt_bit_depth(pix_fmt: str | None) -> int | None:
@@ -502,6 +444,9 @@ def get_pix_fmt_bit_depth(pix_fmt: str | None) -> int | None:
     """
     if not pix_fmt:
         return None
+    known = _PIX_FMT_DEPTH_MAP.get(pix_fmt)
+    if known is not None:
+        return known
     match = _PIX_FMT_DEPTH.search(pix_fmt)
     return int(match.group(1)) if match else 8
 
@@ -619,9 +564,9 @@ def get_video_stream_details(
 
     pix_fmt = video_stream.get("pix_fmt")
     bit_depth = get_pix_fmt_bit_depth(pix_fmt if isinstance(pix_fmt, str) else None)
-    raw_depth = video_stream.get("bits_per_raw_sample")
-    if isinstance(raw_depth, str) and raw_depth.isdigit():
-        bit_depth = int(raw_depth)
+    raw_depth = _positive_int(video_stream.get("bits_per_raw_sample"))
+    if raw_depth is not None:
+        bit_depth = raw_depth
 
     codec_name = video_stream.get("codec_name")
     profile = video_stream.get("profile")

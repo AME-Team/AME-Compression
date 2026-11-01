@@ -219,7 +219,9 @@ class TestTwoPassResults:
     ) -> None:
         source = _touch(tmp_path, "in.mp4", size=20 * MB_IN_BYTES)
         _patch_video_info(monkeypatch)
-        fake = FakeFFmpeg(codes=[3])
+        # Both attempts must fail: the service retries once without perceptual
+        # tuning before it reports the encode as failed.
+        fake = FakeFFmpeg(codes=[3, 3])
         monkeypatch.setattr(video, "_run_ffmpeg", fake)
 
         result = video.compress_video_service(
@@ -239,7 +241,8 @@ class TestTwoPassResults:
         output = tmp_path / "out.mp4"
         output.write_bytes(b"partial-data")
         _patch_video_info(monkeypatch)
-        fake = FakeFFmpeg(codes=[3])
+        # Both attempts must fail, otherwise the tuning fallback recovers.
+        fake = FakeFFmpeg(codes=[3, 3])
         monkeypatch.setattr(video, "_run_ffmpeg", fake)
 
         result = video.compress_video_service(
