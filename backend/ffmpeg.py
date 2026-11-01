@@ -32,6 +32,27 @@ _PIX_FMT_DEPTH_MAP: dict[str, int] = {
     "gbr30": 10,
     "xyz12le": 12,
     "xyz12be": 12,
+    # Packed YUV 4:2:2 with 10/12/16-bit components.
+    "y210le": 10,
+    "y210be": 10,
+    "y212le": 12,
+    "y212be": 12,
+    "y216le": 16,
+    "y216be": 16,
+    # 16-bit-per-channel RGB is 48 bits packed; 5/6-bit packed RGB is still an
+    # 8-bit-per-channel SDR source as far as the encoder is concerned.
+    "rgb48le": 16,
+    "rgb48be": 16,
+    "bgr48le": 16,
+    "bgr48be": 16,
+    "rgb565le": 8,
+    "rgb565be": 8,
+    "bgr565le": 8,
+    "bgr565be": 8,
+    "rgb555le": 8,
+    "rgb555be": 8,
+    "bgr555le": 8,
+    "bgr555be": 8,
 }
 
 

@@ -321,20 +321,21 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
   // Source readout: what the file actually is today (resolution, colour depth,
   // bit rate). Missing fields are simply omitted, never rendered as "undefined".
   const sourceSummary = useMemo(() => {
-    const parts: string[] = []
+    const parts: { kind: string; label: string }[] = []
     const resolution = formatResolution(sourceInfo?.width, sourceInfo?.height)
-    if (resolution) parts.push(resolution)
+    if (resolution) parts.push({ kind: 'resolution', label: resolution })
     const frameRate = formatFrameRate(sourceInfo?.fps)
-    if (frameRate) parts.push(frameRate)
+    if (frameRate) parts.push({ kind: 'frameRate', label: frameRate })
     const depth = formatBitDepth(sourceInfo?.bit_depth)
-    if (depth) parts.push(depth)
+    if (depth) parts.push({ kind: 'bitDepth', label: depth })
     const rate = formatBitRate(sourceInfo?.bit_rate)
     if (rate) {
-      parts.push(
-        sourceInfo?.bit_rate_estimated
+      parts.push({
+        kind: 'bitRate',
+        label: sourceInfo?.bit_rate_estimated
           ? t('video_settings.bit_rate_estimated', { value: rate })
           : rate,
-      )
+      })
     }
     return parts
   }, [sourceInfo, t])
@@ -949,8 +950,8 @@ const MediaView = React.forwardRef<MediaViewHandle, MediaViewProps>(({ onStateCh
               <div className="source-summary" role="status">
                 <span className="source-summary-label">{t('video_settings.source_label')}</span>
                 {sourceSummary.map((part) => (
-                  <span key={part} className="source-summary-figure">
-                    {part}
+                  <span key={part.kind} className="source-summary-figure">
+                    {part.label}
                   </span>
                 ))}
               </div>

@@ -43,7 +43,7 @@ class FakeFFmpeg:
         self,
         cmd: list[str],
         _params: VideoCompressionParams,
-        _stats: video.Stats,
+        _sink: video.EncodeSink,
         _total_duration: float,
         progress: video.PassProgress | None = None,
     ) -> int | None:

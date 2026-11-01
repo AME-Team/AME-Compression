@@ -34,23 +34,27 @@ class RecordingFFmpeg:
         output: Path | None,
         output_size: int = 1024,
         codes: list[int | None] | None = None,
+        messages: list[str] | None = None,
     ) -> None:
         self.calls: list[list[str]] = []
         self.output = output
         self.output_size = output_size
         self.codes = codes or []
+        self.messages = messages or []
 
     def __call__(
         self,
         cmd: list[str],
         _params: Any,
-        _stats: Any,
+        sink: video.EncodeSink,
         _total_duration: float,
         _progress: Any = None,
     ) -> int | None:
         self.calls.append(cmd)
         index = len(self.calls) - 1
         code = self.codes[index] if index < len(self.codes) else 0
+        if code != 0:
+            sink.output_tail.extend(self.messages)
         if code == 0 and self.output is not None:
             self.output.write_bytes(b"\0" * self.output_size)
         return code
@@ -65,13 +69,14 @@ def _compress(
     monkeypatch: pytest.MonkeyPatch,
     source_size: int = 4096,
     codes: list[int | None] | None = None,
+    messages: list[str] | None = None,
     **kwargs: Any,
 ) -> tuple[VideoCompressionResult, RecordingFFmpeg]:
     """Run the video service with a fake encoder and return its recording."""
     source = tmp_path / "in.mp4"
     source.write_bytes(b"\0" * source_size)
     output = tmp_path / "out.mp4"
-    fake = RecordingFFmpeg(output, codes=codes)
+    fake = RecordingFFmpeg(output, codes=codes, messages=messages)
 
     monkeypatch.setattr(video, "get_video_info_safe", _fake_video_info)
     monkeypatch.setattr(video, "_run_ffmpeg", fake)
@@ -152,10 +157,12 @@ class TestVisualTuningArgs:
 class TestTuningFallback:
     """SVT-AV1 builds without ``tune``/``enable-qm`` must not fail the job."""
 
+    TUNING_ERROR = "Svt[error]: Unknown parameter: tune"
+
     def test_single_pass_retries_without_the_parameters(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        result, fake = _compress(tmp_path, monkeypatch, codes=[3, 0])
+        result, fake = _compress(tmp_path, monkeypatch, codes=[3, 0], messages=[self.TUNING_ERROR])
 
         assert result.is_success
         assert len(fake.calls) == 2
@@ -171,6 +178,7 @@ class TestTuningFallback:
             monkeypatch,
             source_size=20 * 1024 * 1024,
             codes=[3, 0, 0],
+            messages=[self.TUNING_ERROR],
             compression_mode=COMPRESSION_MODE_TARGET_SIZE,
             target_size_percent=50.0,
         )
@@ -180,6 +188,27 @@ class TestTuningFallback:
         assert "-svtav1-params" in fake.calls[0]
         assert "-svtav1-params" not in fake.calls[1]
         assert "-svtav1-params" not in fake.calls[2]
+
+    def test_unrelated_failure_is_not_retried(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        result, fake = _compress(
+            tmp_path,
+            monkeypatch,
+            codes=[3],
+            messages=["Invalid data found when processing input"],
+        )
+
+        assert result.is_failed
+        assert len(fake.calls) == 1
+
+    def test_signal_termination_is_not_retried(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        result, fake = _compress(tmp_path, monkeypatch, codes=[-9], messages=[self.TUNING_ERROR])
+
+        assert result.is_failed
+        assert len(fake.calls) == 1
 
     def test_successful_encode_is_not_repeated(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -192,7 +221,13 @@ class TestTuningFallback:
     def test_user_opted_out_means_no_retry(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        result, fake = _compress(tmp_path, monkeypatch, visual_tuning=False, codes=[3])
+        result, fake = _compress(
+            tmp_path,
+            monkeypatch,
+            visual_tuning=False,
+            codes=[3],
+            messages=[self.TUNING_ERROR],
+        )
 
         assert result.is_failed
         assert len(fake.calls) == 1
